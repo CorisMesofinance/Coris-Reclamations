@@ -115,8 +115,17 @@ tr.retard-rouge td{background:#fef2f2;}
 .modal-close{position:absolute;top:16px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted);}
 .modal-box{position:relative;}
 
-@media(max-width:700px){.kpi-row{grid-template-columns:1fr 1fr;}.detail-grid{grid-template-columns:1fr;}}
+.btn-export{background:var(--gold);color:var(--navy);border:none;padding:9px 16px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;white-space:nowrap;}
+.btn-export:hover{opacity:.9;}
+.charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.chart-box{background:var(--bg);border-radius:10px;padding:14px;}
+.chart-box-title{font-size:11px;font-weight:600;color:var(--navy);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;}
+.chart-box canvas{max-height:220px;}
+
+@media(max-width:700px){.kpi-row{grid-template-columns:1fr 1fr;}.detail-grid{grid-template-columns:1fr;}.charts-grid{grid-template-columns:1fr;}}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 </head>
 <body>
 
@@ -246,10 +255,34 @@ tr.retard-rouge td{background:#fef2f2;}
       <div class="kpi-card blue"><div class="kpi-label">En cours</div><div class="kpi-value" id="kpiEnCours">0</div></div>
       <div class="kpi-card" style="border-top-color:var(--success)"><div class="kpi-label">Résolues</div><div class="kpi-value" id="kpiResolues">0</div></div>
       <div class="kpi-card red"><div class="kpi-label">En retard</div><div class="kpi-value" id="kpiRetard">0</div></div>
+      <div class="kpi-card gold"><div class="kpi-label">Délai moyen résolution</div><div class="kpi-value" id="kpiDelaiMoyen">—</div></div>
+    </div>
+
+    <div class="card">
+      <div class="section-title" style="font-size:15px;margin-bottom:14px">📊 Statistiques</div>
+      <div class="charts-grid">
+        <div class="chart-box">
+          <div class="chart-box-title">Évolution mensuelle</div>
+          <canvas id="chartEvolution"></canvas>
+        </div>
+        <div class="chart-box">
+          <div class="chart-box-title">Répartition par nature</div>
+          <canvas id="chartType"></canvas>
+        </div>
+        <div class="chart-box">
+          <div class="chart-box-title">Répartition par agence</div>
+          <canvas id="chartAgence"></canvas>
+        </div>
+        <div class="chart-box">
+          <div class="chart-box-title">Répartition par gestionnaire</div>
+          <canvas id="chartGestionnaire"></canvas>
+        </div>
+      </div>
     </div>
 
     <div class="card">
       <div class="filter-bar">
+        <button class="btn-export" onclick="exporterExcel()">📥 Exporter Excel</button>
         <input type="text" id="filtreRecherche" placeholder="Rechercher (nom, référence, téléphone, agence)..." oninput="renderTable()">
         <select id="filtreStatut" onchange="renderTable()">
           <option value="">Tous les statuts</option>
@@ -367,6 +400,9 @@ let currentSession = null;
 let currentUser = null;
 let allReclamations = [];
 let selectedId = null;
+let currentFilteredRows = [];
+const PALETTE = ['#1A3A7A','#1A5CA8','#C8A84B','#CC0000','#16a34a','#7c3aed','#0891b2','#ea580c','#64748b'];
+let charts = {evolution:null, type:null, agence:null, gestionnaire:null};
 
 // ====== ROUTAGE ======
 function route() {
@@ -577,6 +613,7 @@ async function chargerReclamations() {
     allReclamations = await r.json();
     renderKpis();
     renderTable();
+    renderCharts();
   } catch (e) {
     toast('Erreur de chargement : ' + e.message, 'error');
   }
@@ -594,16 +631,142 @@ function niveauRetard(rec) {
   return null;
 }
 
+function delaiResolutionHeures(rec) {
+  const hist = Array.isArray(rec.historique) ? rec.historique : [];
+  const entree = hist.find(h => h.nouveau_statut === 'resolu' || h.nouveau_statut === 'clos');
+  if (!entree) return null;
+  return (new Date(entree.date).getTime() - new Date(rec.date_creation).getTime()) / 3600000;
+}
+
+function formatDelai(heures) {
+  if (heures === null || isNaN(heures)) return '—';
+  if (heures < 24) return Math.round(heures) + 'h';
+  return (heures / 24).toFixed(1) + 'j';
+}
+
 function renderKpis() {
   const nouvelles = allReclamations.filter(r => r.statut === 'nouveau').length;
   const enCours = allReclamations.filter(r => ['assigne','pris_en_charge','en_traitement'].includes(r.statut)).length;
   const resolues = allReclamations.filter(r => ['resolu','clos'].includes(r.statut)).length;
   const retard = allReclamations.filter(r => niveauRetard(r) !== null).length;
 
+  const delais = allReclamations.map(delaiResolutionHeures).filter(h => h !== null);
+  const delaiMoyen = delais.length > 0 ? delais.reduce((a, b) => a + b, 0) / delais.length : null;
+
   document.getElementById('kpiNouvelles').textContent = nouvelles;
   document.getElementById('kpiEnCours').textContent = enCours;
   document.getElementById('kpiResolues').textContent = resolues;
   document.getElementById('kpiRetard').textContent = retard;
+  document.getElementById('kpiDelaiMoyen').textContent = formatDelai(delaiMoyen);
+}
+
+// ====== GRAPHIQUES ======
+function regrouperTop(compteurs, maxCategories) {
+  const entries = Object.entries(compteurs).sort((a, b) => b[1] - a[1]);
+  if (entries.length <= maxCategories) return entries;
+  const top = entries.slice(0, maxCategories - 1);
+  const autres = entries.slice(maxCategories - 1).reduce((sum, [, v]) => sum + v, 0);
+  top.push(['Autres', autres]);
+  return top;
+}
+
+function creerOuMajChart(cle, canvasId, config) {
+  if (charts[cle]) { charts[cle].destroy(); }
+  const ctx = document.getElementById(canvasId);
+  charts[cle] = new Chart(ctx, config);
+}
+
+function renderCharts() {
+  if (typeof Chart === 'undefined' || allReclamations.length === 0) return;
+
+  // Évolution mensuelle
+  const parMois = {};
+  allReclamations.forEach(r => {
+    const d = new Date(r.date_creation);
+    const cle = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+    parMois[cle] = (parMois[cle] || 0) + 1;
+  });
+  const moisTries = Object.keys(parMois).sort();
+  const moisLabels = moisTries.map(m => {
+    const [y, mo] = m.split('-');
+    return new Date(y, mo - 1, 1).toLocaleDateString('fr-FR', {month: 'short', year: 'numeric'});
+  });
+  creerOuMajChart('evolution', 'chartEvolution', {
+    type: 'bar',
+    data: {labels: moisLabels, datasets: [{label: 'Réclamations', data: moisTries.map(m => parMois[m]), backgroundColor: '#1A5CA8'}]},
+    options: {responsive: true, plugins: {legend: {display: false}}, scales: {y: {beginAtZero: true, ticks: {precision: 0}}}}
+  });
+
+  // Répartition par nature
+  const parType = {};
+  allReclamations.forEach(r => { parType[r.type_plainte] = (parType[r.type_plainte] || 0) + 1; });
+  const typeEntries = Object.entries(parType);
+  creerOuMajChart('type', 'chartType', {
+    type: 'doughnut',
+    data: {
+      labels: typeEntries.map(([k]) => TYPE_LABELS[k] || k),
+      datasets: [{data: typeEntries.map(([, v]) => v), backgroundColor: PALETTE}]
+    },
+    options: {responsive: true, plugins: {legend: {position: 'bottom', labels: {boxWidth: 10, font: {size: 10}}}}}
+  });
+
+  // Répartition par agence
+  const parAgence = {};
+  allReclamations.forEach(r => { const k = r.agence || 'Non renseignée'; parAgence[k] = (parAgence[k] || 0) + 1; });
+  const agenceTop = regrouperTop(parAgence, 8);
+  creerOuMajChart('agence', 'chartAgence', {
+    type: 'bar',
+    data: {labels: agenceTop.map(([k]) => k), datasets: [{label: 'Réclamations', data: agenceTop.map(([, v]) => v), backgroundColor: '#C8A84B'}]},
+    options: {responsive: true, indexAxis: 'y', plugins: {legend: {display: false}}, scales: {x: {beginAtZero: true, ticks: {precision: 0}}}}
+  });
+
+  // Répartition par gestionnaire
+  const parGestionnaire = {};
+  allReclamations.forEach(r => { const k = (r.assigne_a && r.assigne_a.trim()) || 'Non assigné'; parGestionnaire[k] = (parGestionnaire[k] || 0) + 1; });
+  const gestionnaireTop = regrouperTop(parGestionnaire, 8);
+  creerOuMajChart('gestionnaire', 'chartGestionnaire', {
+    type: 'bar',
+    data: {labels: gestionnaireTop.map(([k]) => k), datasets: [{label: 'Réclamations', data: gestionnaireTop.map(([, v]) => v), backgroundColor: '#1A3A7A'}]},
+    options: {responsive: true, indexAxis: 'y', plugins: {legend: {display: false}}, scales: {x: {beginAtZero: true, ticks: {precision: 0}}}}
+  });
+}
+
+// ====== EXPORT EXCEL ======
+function exporterExcel() {
+  if (currentFilteredRows.length === 0) {
+    toast('Aucune réclamation à exporter avec les filtres actuels.', 'error');
+    return;
+  }
+
+  const headers = ['Référence', 'Date de dépôt', 'Client', 'Téléphone', 'Email', 'N° compte', 'Agence', 'Nature', 'Description', 'Statut', 'Urgence', 'Assigné à', 'Délai moyen résolution'];
+  const data = currentFilteredRows.map(r => [
+    r.reference || '',
+    new Date(r.date_creation).toLocaleDateString('fr-FR'),
+    r.nom_client || '',
+    r.telephone || '',
+    r.email || '',
+    r.numero_compte || '',
+    r.agence || '',
+    TYPE_LABELS[r.type_plainte] || r.type_plainte,
+    r.description || '',
+    STATUT_LABELS[r.statut] || r.statut,
+    r.niveau_urgence === 'urgent' ? 'Urgent' : 'Normal',
+    r.assigne_a || '',
+    formatDelai(delaiResolutionHeures(r))
+  ]);
+
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
+  const headerStyle = {font: {bold: true, color: {rgb: 'FFFFFF'}}, fill: {fgColor: {rgb: '1A3A7A'}}, alignment: {horizontal: 'center'}};
+  headers.forEach((_, i) => {
+    const cellRef = XLSX.utils.encode_cell({r: 0, c: i});
+    if (ws[cellRef]) ws[cellRef].s = headerStyle;
+  });
+  ws['!cols'] = headers.map(() => ({wch: 20}));
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Réclamations');
+  const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+  XLSX.writeFile(wb, `reclamations_${dateStr}.xlsx`);
 }
 
 function renderTable() {
@@ -622,6 +785,8 @@ function renderTable() {
     }
     return true;
   });
+
+  currentFilteredRows = rows;
 
   const tbody = document.getElementById('tableBody');
   tbody.innerHTML = '';
