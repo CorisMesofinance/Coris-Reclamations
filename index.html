@@ -71,6 +71,8 @@ header{background:var(--navy);padding:0 20px;display:flex;align-items:center;jus
 .user-badge-role{color:var(--gold);font-size:10px;font-weight:600;text-transform:uppercase;}
 .logout-btn{background:rgba(204,0,0,.3);border:1px solid rgba(204,0,0,.5);color:white;padding:7px 14px;border-radius:6px;font-size:12px;cursor:pointer;font-family:'Inter',sans-serif;}
 .logout-btn:hover{background:var(--red);}
+.qr-btn{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);color:white;padding:7px 14px;border-radius:6px;font-size:12px;cursor:pointer;font-family:'Inter',sans-serif;}
+.qr-btn:hover{background:rgba(255,255,255,.22);}
 
 /* SOUS-NAVIGATION STAFF */
 .staff-subnav{background:var(--white);border-bottom:1px solid var(--border);display:flex;padding:0 20px;gap:4px;overflow-x:auto;}
@@ -145,6 +147,7 @@ tr.retard-rouge td{background:#fef2f2;}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 </head>
 <body>
 
@@ -324,6 +327,7 @@ tr.retard-rouge td{background:#fef2f2;}
         <div class="user-badge-name" id="userBadgeName">—</div>
         <div class="user-badge-role" id="userBadgeRole">—</div>
       </div>
+      <button class="qr-btn" onclick="ouvrirQrModal()">📱 QR Code</button>
       <button class="logout-btn" onclick="doLogout()">Déconnexion</button>
     </div>
   </header>
@@ -519,6 +523,18 @@ tr.retard-rouge td{background:#fef2f2;}
       <div class="detail-item-label" style="margin-bottom:8px">Historique</div>
       <div id="detailHistorique"></div>
     </div>
+  </div>
+</div>
+
+<!-- ============ MODAL QR CODE ============ -->
+<div class="modal-overlay" id="qrModal">
+  <div class="modal-box" style="max-width:360px;text-align:center">
+    <button class="modal-close" onclick="fermerQrModal()">✕</button>
+    <div class="modal-title">QR Code — Formulaire client</div>
+    <div class="modal-sub">À imprimer et afficher en agence : scanné, il ouvre directement le formulaire (réclamation, suggestion, avis).</div>
+    <div id="qrcodeContainer" style="display:flex;justify-content:center;margin:20px 0"></div>
+    <div style="font-size:11px;color:var(--muted);word-break:break-all;margin-bottom:16px">https://corismesofinance.github.io/Coris-Reclamations/</div>
+    <button class="btn-primary" style="margin-top:0" onclick="telechargerQrCode()">📥 Télécharger le QR Code</button>
   </div>
 </div>
 
@@ -878,6 +894,39 @@ function switchStaffTab(tab) {
     document.getElementById('view' + noms[t]).style.display = (t === tab) ? 'block' : 'none';
     document.getElementById('stab' + noms[t]).classList.toggle('active', t === tab);
   });
+}
+
+// ====== QR CODE ======
+const PROD_URL = 'https://corismesofinance.github.io/Coris-Reclamations/';
+
+function ouvrirQrModal() {
+  const container = document.getElementById('qrcodeContainer');
+  container.innerHTML = '';
+  new QRCode(container, {
+    text: PROD_URL,
+    width: 220,
+    height: 220,
+    colorDark: '#1A3A7A',
+    colorLight: '#ffffff',
+    correctLevel: QRCode.CorrectLevel.M
+  });
+  document.getElementById('qrModal').classList.add('show');
+}
+
+function fermerQrModal() {
+  document.getElementById('qrModal').classList.remove('show');
+}
+
+function telechargerQrCode() {
+  const container = document.getElementById('qrcodeContainer');
+  const canvas = container.querySelector('canvas');
+  const img = container.querySelector('img');
+  const dataUrl = canvas ? canvas.toDataURL('image/png') : (img ? img.src : null);
+  if (!dataUrl) { toast('QR Code introuvable, réessaie.', 'error'); return; }
+  const a = document.createElement('a');
+  a.href = dataUrl;
+  a.download = 'qrcode-coris-reclamations.png';
+  a.click();
 }
 
 // ====== DONNÉES ======
