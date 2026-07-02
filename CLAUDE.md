@@ -104,5 +104,6 @@ Recherche par numéro de compte → affichage des réclamations liées à ce cli
 ## État d'avancement
 - **Étape 1 livrée** (voir `schema_step1.sql` + `index.html`) : formulaire public de dépôt, génération de référence `PL-YYYYMMDD-00001` et échéance SLA via trigger Postgres, tableau de bord staff (connexion Supabase Auth, liste, filtres, KPI simples, avancement du workflow avec historique JSONB).
 - **Pas encore fait** : pièces jointes (Storage), commentaires dédiés, KPI avancés/graphiques, export Excel, QR code, notifications email/SMS, relances pg_cron.
-- Projet Supabase dédié **créé** : URL `https://pqsczevlnvdayelkjtmq.supabase.co`, clé anon renseignée dans `index.html` (`SB_URL` / `SB_KEY`).
-- ⚠️ **`schema_step1.sql` doit encore être exécuté manuellement** dans l'éditeur SQL de ce projet Supabase (tables `reclamations`/`profiles`, trigger de référence, fonction RPC `soumettre_reclamation`, policies RLS) — sans quoi le formulaire et le dashboard ne fonctionneront pas. Puis créer les comptes staff (Authentication > Users) + lignes `profiles` correspondantes (voir bas du script SQL).
+- Projet Supabase dédié **créé et configuré** : URL `https://pqsczevlnvdayelkjtmq.supabase.co`, clé anon renseignée dans `index.html` (`SB_URL` / `SB_KEY`), `schema_step1.sql` exécuté, premier compte staff créé (`bcoulibaly@coris-mesofinance.com`, rôle `admin`).
+- Dépôt GitHub créé et poussé : `abadracoulibaly-max/Coris-Reclamations`.
+- ⚠️ **Déploiement GitHub Pages en cours de diagnostic** : les premiers runs du workflow "pages build and deployment" sont restés bloqués en `deployment_queued` puis ont échoué par timeout, sans lien avec le code (le contenu de `index.html`/`CLAUDE.md` est correct). Support GitHub contacté le cas échéant.
