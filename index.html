@@ -18,6 +18,8 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 .center-box{background:white;border-radius:16px;padding:36px;width:100%;max-width:480px;box-shadow:0 20px 60px rgba(0,0,0,.2);}
 .center-logo{display:flex;align-items:center;gap:12px;margin-bottom:24px;}
 .logo-fallback{width:44px;height:44px;background:var(--navy);border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;color:var(--gold);flex-shrink:0;}
+.logo-img-center{height:44px;width:44px;object-fit:contain;flex-shrink:0;}
+.logo-img-header{height:38px;width:auto;object-fit:contain;filter:brightness(0) invert(1);flex-shrink:0;}
 .center-title{font-size:21px;font-weight:700;color:var(--navy);margin-bottom:4px;}
 .center-sub{font-size:13px;color:var(--muted);margin-bottom:24px;}
 .form-group{display:flex;flex-direction:column;gap:5px;margin-bottom:16px;}
@@ -133,7 +135,9 @@ tr.retard-rouge td{background:#fef2f2;}
 <div id="publicPage" class="center-page">
   <div class="center-box">
     <div class="center-logo">
-      <div class="logo-fallback">CM</div>
+      <img class="logo-img-center" src="https://corismeso.finance/wp-content/uploads/2020/05/cropped-cropped-favicon3-270x270.png"
+        alt="CMF" onerror="this.style.display='none';document.getElementById('lfPublic').style.display='flex'">
+      <div class="logo-fallback" id="lfPublic" style="display:none">CM</div>
       <div>
         <div class="center-title" style="margin-bottom:0">Coris Mésofinance CI</div>
         <div class="center-sub" style="margin-bottom:0">Déposer une réclamation</div>
@@ -207,7 +211,9 @@ tr.retard-rouge td{background:#fef2f2;}
 <div id="loginPage" class="center-page" style="display:none">
   <div class="center-box">
     <div class="center-logo">
-      <div class="logo-fallback">CM</div>
+      <img class="logo-img-center" src="https://corismeso.finance/wp-content/uploads/2020/05/cropped-cropped-favicon3-270x270.png"
+        alt="CMF" onerror="this.style.display='none';document.getElementById('lfLogin').style.display='flex'">
+      <div class="logo-fallback" id="lfLogin" style="display:none">CM</div>
       <div>
         <div class="center-title" style="margin-bottom:0">Espace collaborateur</div>
         <div class="center-sub" style="margin-bottom:0">Coris Mésofinance CI — Réclamations</div>
@@ -231,7 +237,9 @@ tr.retard-rouge td{background:#fef2f2;}
 <div id="appPage" style="display:none">
   <header>
     <div class="header-logo">
-      <div class="logo-fallback">CM</div>
+      <img class="logo-img-header" src="https://corismeso.finance/wp-content/uploads/2020/05/cropped-cropped-favicon3-270x270.png"
+        alt="CMF" onerror="this.style.display='none';document.getElementById('lfHeader').style.display='flex'">
+      <div class="logo-fallback" id="lfHeader" style="display:none">CM</div>
       <div class="header-info">
         <div class="header-title">Coris Mésofinance Côte d'Ivoire</div>
         <div class="header-sub">Suivi des réclamations</div>
