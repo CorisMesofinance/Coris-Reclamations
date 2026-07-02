@@ -64,10 +64,9 @@ nouveau → assigné → pris_en_charge → en_traitement → résolu → clos
 Chaque transition : horodatée, enregistrée dans `historique` (même pattern JSONB que `statut_historique` des autres apps), déclenche un email au responsable assigné.
 
 ## SLA
-- Délai cible : 48h → au-delà, ligne affichée en orange dans le tableau
-- 72h → ligne en rouge + relance automatique (email) au responsable assigné
-- Calcul du dépassement fait côté client (JS) à l'affichage — pas besoin de cron pour l'affichage visuel
-- La relance automatique à 72h nécessite en revanche une tâche planifiée côté Supabase (pg_cron + Edge Function) — à construire en dernière phase
+- **Délai cible différencié selon l'urgence** (implémenté, voir `schema_sla_urgence.sql`) : 24h pour les réclamations urgentes, 48h pour les normales. Calculé par le trigger Postgres à la création (`sla_deadline` = `date_creation` + 24h ou 48h selon `niveau_urgence`), stocké en base — pas recalculé côté client.
+- Seuil d'alerte "orange" dans le tableau : dépassement de `sla_deadline`. Seuil "rouge" : 1.5x le SLA cible (36h pour urgent, 72h pour normal) — logique dans `niveauRetard()` (`index.html`), qui lit `rec.sla_deadline` (pas de recalcul fixe).
+- Relance automatique (email) au responsable assigné en cas de dépassement du seuil rouge nécessite en revanche une tâche planifiée côté Supabase (pg_cron + envoi email) — pas encore construite, prévue en dernière phase.
 
 ## Accès public (formulaire client)
 - Page accessible sans authentification (RLS Supabase : INSERT autorisé à tous sur `reclamations`, SELECT/UPDATE/DELETE réservés aux rôles staff authentifiés)

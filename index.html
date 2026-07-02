@@ -1040,15 +1040,19 @@ function renderAvis() {
   document.getElementById('kpiNombreAvis').textContent = allAvis.length;
 }
 
-function heuresEcoulees(dateCreation) {
-  return (Date.now() - new Date(dateCreation).getTime()) / 3600000;
-}
-
+// SLA : 24h pour les réclamations urgentes, 48h pour les normales
+// (voir schema_sla_urgence.sql, appliqué par le trigger à la création).
+// Le seuil "rouge" est fixé à 1.5x le SLA (36h pour urgent, 72h pour normal).
 function niveauRetard(rec) {
   if (rec.statut === 'resolu' || rec.statut === 'clos') return null;
-  const h = heuresEcoulees(rec.date_creation);
-  if (h > 72) return 'rouge';
-  if (h > 48) return 'orange';
+  if (!rec.sla_deadline) return null;
+  const creation = new Date(rec.date_creation).getTime();
+  const deadline = new Date(rec.sla_deadline).getTime();
+  const slaMs = deadline - creation;
+  const seuilRouge = creation + slaMs * 1.5;
+  const maintenant = Date.now();
+  if (maintenant > seuilRouge) return 'rouge';
+  if (maintenant > deadline) return 'orange';
   return null;
 }
 
@@ -1227,7 +1231,7 @@ function renderTable() {
       <td><span class="badge badge-${r.statut}">${STATUT_LABELS[r.statut] || r.statut}</span></td>
       <td>${r.niveau_urgence === 'urgent' ? '<span class="badge badge-urgent">URGENT</span>' : '—'}</td>
       <td>${escapeHtml(r.assigne_a || '—')}</td>
-      <td>${retard === 'rouge' ? '⛔ +72h' : retard === 'orange' ? '⚠️ +48h' : 'OK'}</td>
+      <td>${retard === 'rouge' ? '⛔ Critique' : retard === 'orange' ? '⚠️ SLA dépassé' : 'OK'}</td>
     `;
     tbody.appendChild(tr);
   });
