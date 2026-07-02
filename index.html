@@ -43,6 +43,17 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 .spinner{width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg);}}
 
+/* ONGLETS FORMULAIRE PUBLIC */
+.public-tabs{display:flex;gap:6px;margin-bottom:22px;background:var(--bg);border-radius:10px;padding:4px;}
+.public-tab{flex:1;padding:10px 8px;border:none;background:none;border-radius:8px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;font-family:'Inter',sans-serif;transition:all .15s;}
+.public-tab.active{background:var(--navy);color:#fff;}
+.public-tab:hover:not(.active){color:var(--navy);}
+
+/* NOTATION ÉTOILES */
+.star-rating{display:flex;gap:6px;}
+.star{font-size:34px;line-height:1;color:var(--border);cursor:pointer;transition:color .15s;user-select:none;}
+.star.selected{color:var(--gold);}
+
 /* CONFIRMATION */
 .confirm-icon{font-size:48px;text-align:center;margin-bottom:12px;}
 .confirm-ref{background:var(--navy-light);border:1.5px dashed var(--navy);border-radius:10px;padding:16px;text-align:center;margin:16px 0;}
@@ -60,6 +71,12 @@ header{background:var(--navy);padding:0 20px;display:flex;align-items:center;jus
 .user-badge-role{color:var(--gold);font-size:10px;font-weight:600;text-transform:uppercase;}
 .logout-btn{background:rgba(204,0,0,.3);border:1px solid rgba(204,0,0,.5);color:white;padding:7px 14px;border-radius:6px;font-size:12px;cursor:pointer;font-family:'Inter',sans-serif;}
 .logout-btn:hover{background:var(--red);}
+
+/* SOUS-NAVIGATION STAFF */
+.staff-subnav{background:var(--white);border-bottom:1px solid var(--border);display:flex;padding:0 20px;gap:4px;overflow-x:auto;}
+.staff-subtab{padding:13px 18px;font-size:13px;font-weight:500;color:var(--muted);cursor:pointer;border:none;border-bottom:2px solid transparent;background:none;font-family:'Inter',sans-serif;transition:all .15s;white-space:nowrap;}
+.staff-subtab:hover{color:var(--blue);}
+.staff-subtab.active{color:var(--navy);border-bottom-color:var(--gold);font-weight:600;}
 
 /* MAIN (staff) */
 .main{max-width:1180px;margin:0 auto;padding:24px 18px 70px;}
@@ -140,54 +157,111 @@ tr.retard-rouge td{background:#fef2f2;}
       <div class="logo-fallback" id="lfPublic" style="display:none">CM</div>
       <div>
         <div class="center-title" style="margin-bottom:0">Coris Mésofinance CI</div>
-        <div class="center-sub" style="margin-bottom:0">Déposer une réclamation</div>
+        <div class="center-sub" style="margin-bottom:0">Votre avis compte pour nous</div>
       </div>
     </div>
-    <div class="form-error" id="pubError"></div>
-    <div class="form-group">
-      <label class="required">Nom complet</label>
-      <input type="text" id="pubNom" placeholder="Votre nom et prénom">
+
+    <div class="public-tabs">
+      <button class="public-tab active" id="ptabReclamation" onclick="switchPublicTab('reclamation')">📋 Réclamation</button>
+      <button class="public-tab" id="ptabSuggestion" onclick="switchPublicTab('suggestion')">💡 Suggestion</button>
+      <button class="public-tab" id="ptabAvis" onclick="switchPublicTab('avis')">⭐ Avis</button>
     </div>
-    <div class="form-group">
-      <label class="required">Téléphone</label>
-      <input type="tel" id="pubTel" placeholder="Ex: 07 00 00 00 00">
+
+    <!-- ---- Onglet Réclamation ---- -->
+    <div id="formReclamation">
+      <div class="form-error" id="pubError"></div>
+      <div class="form-group">
+        <label class="required">Nom complet</label>
+        <input type="text" id="pubNom" placeholder="Votre nom et prénom">
+      </div>
+      <div class="form-group">
+        <label class="required">Téléphone</label>
+        <input type="tel" id="pubTel" placeholder="Ex: 07 00 00 00 00">
+      </div>
+      <div class="form-group">
+        <label>Email (optionnel)</label>
+        <input type="email" id="pubEmail" placeholder="votre.email@exemple.com">
+      </div>
+      <div class="form-group">
+        <label>Numéro de compte (optionnel)</label>
+        <input type="text" id="pubCompte" placeholder="Si vous êtes déjà client">
+      </div>
+      <div class="form-group">
+        <label class="required">Agence concernée</label>
+        <input type="text" id="pubAgence" placeholder="Ex: Agence Plateau, Adjamé...">
+      </div>
+      <div class="form-group">
+        <label class="required">Nature de la réclamation</label>
+        <select id="pubType">
+          <option value="accueil">Accueil / Service client</option>
+          <option value="credit">Crédit</option>
+          <option value="epargne">Épargne</option>
+          <option value="mobile_money">Mobile Money</option>
+          <option value="personnel">Comportement d'un agent</option>
+          <option value="autre">Autre</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="required">Description</label>
+        <textarea id="pubDesc" placeholder="Décrivez votre réclamation le plus précisément possible..."></textarea>
+      </div>
+      <div class="checkbox-row">
+        <input type="checkbox" id="pubUrgent">
+        <label for="pubUrgent">Cette réclamation est urgente</label>
+      </div>
+      <button class="btn-primary" id="pubBtn" onclick="soumettreReclamation()">Envoyer ma réclamation</button>
     </div>
-    <div class="form-group">
-      <label>Email (optionnel)</label>
-      <input type="email" id="pubEmail" placeholder="votre.email@exemple.com">
+
+    <!-- ---- Onglet Suggestion ---- -->
+    <div id="formSuggestion" style="display:none">
+      <div class="form-error" id="sugError"></div>
+      <div class="form-group">
+        <label>Nom (optionnel)</label>
+        <input type="text" id="sugNom" placeholder="Votre nom et prénom">
+      </div>
+      <div class="form-group">
+        <label>Agence concernée (optionnel)</label>
+        <input type="text" id="sugAgence" placeholder="Ex: Agence Plateau, Adjamé...">
+      </div>
+      <div class="form-group">
+        <label class="required">Votre suggestion</label>
+        <textarea id="sugTexte" placeholder="Partagez votre idée pour améliorer nos services..."></textarea>
+      </div>
+      <button class="btn-primary" id="sugBtn" onclick="soumettreSuggestion()">Envoyer ma suggestion</button>
     </div>
-    <div class="form-group">
-      <label>Numéro de compte (optionnel)</label>
-      <input type="text" id="pubCompte" placeholder="Si vous êtes déjà client">
+
+    <!-- ---- Onglet Avis ---- -->
+    <div id="formAvis" style="display:none">
+      <div class="form-error" id="avisError"></div>
+      <div class="form-group">
+        <label>Nom (optionnel)</label>
+        <input type="text" id="avisNom" placeholder="Votre nom et prénom">
+      </div>
+      <div class="form-group">
+        <label class="required">Agence concernée</label>
+        <input type="text" id="avisAgence" placeholder="Ex: Agence Plateau, Adjamé...">
+      </div>
+      <div class="form-group">
+        <label class="required">Votre note</label>
+        <div class="star-rating" id="avisStars">
+          <span class="star" data-value="1">★</span>
+          <span class="star" data-value="2">★</span>
+          <span class="star" data-value="3">★</span>
+          <span class="star" data-value="4">★</span>
+          <span class="star" data-value="5">★</span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Commentaire (optionnel)</label>
+        <textarea id="avisCommentaire" placeholder="Dites-nous en plus sur votre expérience..."></textarea>
+      </div>
+      <button class="btn-primary" id="avisBtn" onclick="soumettreAvis()">Envoyer mon avis</button>
     </div>
-    <div class="form-group">
-      <label class="required">Agence concernée</label>
-      <input type="text" id="pubAgence" placeholder="Ex: Agence Plateau, Adjamé...">
-    </div>
-    <div class="form-group">
-      <label class="required">Nature de la réclamation</label>
-      <select id="pubType">
-        <option value="accueil">Accueil / Service client</option>
-        <option value="credit">Crédit</option>
-        <option value="epargne">Épargne</option>
-        <option value="mobile_money">Mobile Money</option>
-        <option value="personnel">Comportement d'un agent</option>
-        <option value="autre">Autre</option>
-      </select>
-    </div>
-    <div class="form-group">
-      <label class="required">Description</label>
-      <textarea id="pubDesc" placeholder="Décrivez votre réclamation le plus précisément possible..."></textarea>
-    </div>
-    <div class="checkbox-row">
-      <input type="checkbox" id="pubUrgent">
-      <label for="pubUrgent">Cette réclamation est urgente</label>
-    </div>
+
     <!-- Piège anti-spam : un humain ne remplit jamais ce champ -->
     <div class="hp-field" aria-hidden="true">
       <input type="text" id="pubWebsite" name="website" tabindex="-1" autocomplete="off">
     </div>
-    <button class="btn-primary" id="pubBtn" onclick="soumettreReclamation()">Envoyer ma réclamation</button>
     <div class="center-footer">Coris Mésofinance Côte d'Ivoire — <a href="#admin">Espace collaborateur</a></div>
   </div>
 </div>
@@ -196,14 +270,14 @@ tr.retard-rouge td{background:#fef2f2;}
 <div id="confirmPage" class="center-page" style="display:none">
   <div class="center-box">
     <div class="confirm-icon">✅</div>
-    <div class="center-title" style="text-align:center">Réclamation enregistrée</div>
-    <div class="center-sub" style="text-align:center">Merci, votre demande a bien été prise en compte.</div>
-    <div class="confirm-ref">
+    <div class="center-title" style="text-align:center" id="confirmTitle">Réclamation enregistrée</div>
+    <div class="center-sub" style="text-align:center" id="confirmSub">Merci, votre demande a bien été prise en compte.</div>
+    <div class="confirm-ref" id="confirmRefBlock">
       <div class="confirm-ref-label">Votre référence</div>
       <div class="confirm-ref-value" id="confirmRefValue">—</div>
     </div>
-    <div class="center-sub" style="text-align:center;margin-bottom:0">Conservez cette référence, elle vous permettra de suivre votre dossier.</div>
-    <button class="btn-secondary" onclick="nouvelleReclamation()">Déposer une autre réclamation</button>
+    <div class="center-sub" style="text-align:center;margin-bottom:0" id="confirmFootNote">Conservez cette référence, elle vous permettra de suivre votre dossier.</div>
+    <button class="btn-secondary" onclick="retourFormulaire()">Revenir au formulaire</button>
   </div>
 </div>
 
@@ -254,7 +328,14 @@ tr.retard-rouge td{background:#fef2f2;}
     </div>
   </header>
 
+  <div class="staff-subnav">
+    <button class="staff-subtab active" id="stabReclamations" onclick="switchStaffTab('reclamations')">📋 Réclamations</button>
+    <button class="staff-subtab" id="stabSuggestions" onclick="switchStaffTab('suggestions')">💡 Suggestions</button>
+    <button class="staff-subtab" id="stabAvis" onclick="switchStaffTab('avis')">⭐ Avis</button>
+  </div>
+
   <div class="main">
+  <div id="viewReclamations">
     <div class="section-title">Tableau de bord réclamations</div>
     <div class="section-desc">Suivi, filtrage et traitement des réclamations clients.</div>
 
@@ -339,6 +420,51 @@ tr.retard-rouge td{background:#fef2f2;}
         <div>Aucune réclamation ne correspond aux filtres.</div>
       </div>
     </div>
+  </div>
+
+  <div id="viewSuggestions" style="display:none">
+    <div class="section-title">Suggestions clients</div>
+    <div class="section-desc">Idées et retours transmis via le formulaire public.</div>
+    <div class="card">
+      <div class="filter-bar">
+        <input type="text" id="filtreSuggestion" placeholder="Rechercher (nom, agence, texte)..." oninput="renderSuggestions()">
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Date</th><th>Nom</th><th>Agence</th><th>Suggestion</th></tr></thead>
+          <tbody id="suggestionsBody"></tbody>
+        </table>
+      </div>
+      <div class="empty-state" id="suggestionsEmptyState" style="display:none">
+        <div class="empty-icon">💡</div>
+        <div>Aucune suggestion pour le moment.</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="viewAvis" style="display:none">
+    <div class="section-title">Avis clients</div>
+    <div class="section-desc">Notation et commentaires laissés par les clients.</div>
+    <div class="kpi-row" style="grid-template-columns:repeat(2,1fr)">
+      <div class="kpi-card gold"><div class="kpi-label">Note moyenne</div><div class="kpi-value" id="kpiNoteMoyenne">—</div></div>
+      <div class="kpi-card blue"><div class="kpi-label">Nombre d'avis</div><div class="kpi-value" id="kpiNombreAvis">0</div></div>
+    </div>
+    <div class="card">
+      <div class="filter-bar">
+        <input type="text" id="filtreAvis" placeholder="Rechercher (nom, agence, commentaire)..." oninput="renderAvis()">
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Date</th><th>Nom</th><th>Agence</th><th>Note</th><th>Commentaire</th></tr></thead>
+          <tbody id="avisBody"></tbody>
+        </table>
+      </div>
+      <div class="empty-state" id="avisEmptyState" style="display:none">
+        <div class="empty-icon">⭐</div>
+        <div>Aucun avis pour le moment.</div>
+      </div>
+    </div>
+  </div>
   </div>
 </div>
 
@@ -450,16 +576,70 @@ function toast(msg, type) {
   setTimeout(() => { el.className = 'toast'; }, 3500);
 }
 
-// ====== FORMULAIRE PUBLIC ======
+// ====== ONGLETS FORMULAIRE PUBLIC ======
+let currentPublicTab = 'reclamation';
+function switchPublicTab(tab) {
+  currentPublicTab = tab;
+  const noms = {reclamation: 'Reclamation', suggestion: 'Suggestion', avis: 'Avis'};
+  Object.keys(noms).forEach(t => {
+    document.getElementById('form' + noms[t]).style.display = (t === tab) ? 'block' : 'none';
+    document.getElementById('ptab' + noms[t]).classList.toggle('active', t === tab);
+  });
+}
+
+function afficherConfirmation(type, reference) {
+  const titres = {reclamation: 'Réclamation enregistrée', suggestion: 'Suggestion envoyée', avis: 'Avis envoyé'};
+  const sousTitres = {
+    reclamation: 'Merci, votre demande a bien été prise en compte.',
+    suggestion: 'Merci pour votre suggestion, elle a bien été transmise.',
+    avis: 'Merci pour votre retour, il compte beaucoup pour nous.'
+  };
+  document.getElementById('confirmTitle').textContent = titres[type];
+  document.getElementById('confirmSub').textContent = sousTitres[type];
+
+  const avecReference = type === 'reclamation';
+  document.getElementById('confirmRefBlock').style.display = avecReference ? 'block' : 'none';
+  document.getElementById('confirmFootNote').style.display = avecReference ? 'block' : 'none';
+  if (avecReference) document.getElementById('confirmRefValue').textContent = reference || '—';
+
+  document.getElementById('publicPage').style.display = 'none';
+  document.getElementById('confirmPage').style.display = 'flex';
+}
+
+function retourFormulaire() {
+  ['pubNom','pubTel','pubEmail','pubCompte','pubAgence','pubDesc','pubWebsite','sugNom','sugAgence','sugTexte','avisNom','avisAgence','avisCommentaire'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  document.getElementById('pubType').value = 'accueil';
+  document.getElementById('pubUrgent').checked = false;
+  avisNoteSelectionnee = 0;
+  document.querySelectorAll('#avisStars .star').forEach(s => s.classList.remove('selected'));
+
+  document.getElementById('confirmPage').style.display = 'none';
+  document.getElementById('publicPage').style.display = 'flex';
+  switchPublicTab(currentPublicTab);
+}
+
+// ====== NOTATION ÉTOILES ======
+let avisNoteSelectionnee = 0;
+document.querySelectorAll('#avisStars .star').forEach(star => {
+  star.addEventListener('click', () => {
+    avisNoteSelectionnee = parseInt(star.dataset.value, 10);
+    document.querySelectorAll('#avisStars .star').forEach(s => {
+      s.classList.toggle('selected', parseInt(s.dataset.value, 10) <= avisNoteSelectionnee);
+    });
+  });
+});
+
+// ====== FORMULAIRE PUBLIC : RÉCLAMATION ======
 async function soumettreReclamation() {
   const errEl = document.getElementById('pubError');
   errEl.style.display = 'none';
 
   // Honeypot : un bot remplit ce champ invisible, on ignore silencieusement
   if (document.getElementById('pubWebsite').value.trim() !== '') {
-    document.getElementById('confirmRefValue').textContent = '—';
-    document.getElementById('publicPage').style.display = 'none';
-    document.getElementById('confirmPage').style.display = 'flex';
+    afficherConfirmation('reclamation', '—');
     return;
   }
 
@@ -501,9 +681,7 @@ async function soumettreReclamation() {
     const reference = await r.json();
     if (!reference) throw new Error('Réponse invalide du serveur.');
 
-    document.getElementById('confirmRefValue').textContent = reference;
-    document.getElementById('publicPage').style.display = 'none';
-    document.getElementById('confirmPage').style.display = 'flex';
+    afficherConfirmation('reclamation', reference);
   } catch (e) {
     errEl.textContent = "Erreur lors de l'envoi : " + e.message + ". Veuillez réessayer.";
     errEl.style.display = 'block';
@@ -513,12 +691,88 @@ async function soumettreReclamation() {
   btn.innerHTML = 'Envoyer ma réclamation';
 }
 
-function nouvelleReclamation() {
-  ['pubNom','pubTel','pubEmail','pubCompte','pubAgence','pubDesc','pubWebsite'].forEach(id => document.getElementById(id).value = '');
-  document.getElementById('pubType').value = 'accueil';
-  document.getElementById('pubUrgent').checked = false;
-  document.getElementById('confirmPage').style.display = 'none';
-  document.getElementById('publicPage').style.display = 'flex';
+// ====== FORMULAIRE PUBLIC : SUGGESTION ======
+async function soumettreSuggestion() {
+  const errEl = document.getElementById('sugError');
+  errEl.style.display = 'none';
+
+  if (document.getElementById('pubWebsite').value.trim() !== '') {
+    afficherConfirmation('suggestion');
+    return;
+  }
+
+  const nom = document.getElementById('sugNom').value.trim();
+  const agence = document.getElementById('sugAgence').value.trim();
+  const texte = document.getElementById('sugTexte').value.trim();
+
+  if (!texte) {
+    errEl.textContent = 'Veuillez décrire votre suggestion.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  const btn = document.getElementById('sugBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div> Envoi en cours...';
+
+  try {
+    const r = await fetch(`${SB_URL}/rest/v1/suggestions`, {
+      method: 'POST',
+      headers: {'apikey': SB_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal'},
+      body: JSON.stringify({nom_client: nom || null, agence: agence || null, texte})
+    });
+    if (!r.ok) throw new Error('Erreur HTTP ' + r.status);
+
+    afficherConfirmation('suggestion');
+  } catch (e) {
+    errEl.textContent = "Erreur lors de l'envoi : " + e.message + ". Veuillez réessayer.";
+    errEl.style.display = 'block';
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = 'Envoyer ma suggestion';
+}
+
+// ====== FORMULAIRE PUBLIC : AVIS ======
+async function soumettreAvis() {
+  const errEl = document.getElementById('avisError');
+  errEl.style.display = 'none';
+
+  if (document.getElementById('pubWebsite').value.trim() !== '') {
+    afficherConfirmation('avis');
+    return;
+  }
+
+  const nom = document.getElementById('avisNom').value.trim();
+  const agence = document.getElementById('avisAgence').value.trim();
+  const commentaire = document.getElementById('avisCommentaire').value.trim();
+
+  if (!agence || !avisNoteSelectionnee) {
+    errEl.textContent = "Veuillez indiquer l'agence concernée et donner une note.";
+    errEl.style.display = 'block';
+    return;
+  }
+
+  const btn = document.getElementById('avisBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div> Envoi en cours...';
+
+  try {
+    const r = await fetch(`${SB_URL}/rest/v1/avis`, {
+      method: 'POST',
+      headers: {'apikey': SB_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal'},
+      body: JSON.stringify({nom_client: nom || null, agence, note: avisNoteSelectionnee, commentaire: commentaire || null})
+    });
+    if (!r.ok) throw new Error('Erreur HTTP ' + r.status);
+
+    afficherConfirmation('avis');
+  } catch (e) {
+    errEl.textContent = "Erreur lors de l'envoi : " + e.message + ". Veuillez réessayer.";
+    errEl.style.display = 'block';
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = 'Envoyer mon avis';
 }
 
 // ====== AUTH STAFF ======
@@ -613,6 +867,17 @@ function showApp() {
   document.getElementById('userBadgeRole').textContent = currentUser.role || '—';
   chargerProfils();
   chargerReclamations();
+  chargerSuggestions();
+  chargerAvis();
+}
+
+// ====== SOUS-NAVIGATION STAFF ======
+function switchStaffTab(tab) {
+  const noms = {reclamations: 'Reclamations', suggestions: 'Suggestions', avis: 'Avis'};
+  Object.keys(noms).forEach(t => {
+    document.getElementById('view' + noms[t]).style.display = (t === tab) ? 'block' : 'none';
+    document.getElementById('stab' + noms[t]).classList.toggle('active', t === tab);
+  });
 }
 
 // ====== DONNÉES ======
@@ -641,6 +906,83 @@ async function chargerReclamations() {
   } catch (e) {
     toast('Erreur de chargement : ' + e.message, 'error');
   }
+}
+
+let allSuggestions = [];
+async function chargerSuggestions() {
+  try {
+    const r = await fetch(`${SB_URL}/rest/v1/suggestions?select=*&order=date_creation.desc`, {
+      headers: {'apikey': SB_KEY, 'Authorization': 'Bearer ' + currentSession}
+    });
+    if (!r.ok) throw new Error('Erreur HTTP ' + r.status);
+    allSuggestions = await r.json();
+    renderSuggestions();
+  } catch (e) {
+    console.error('Erreur chargerSuggestions:', e);
+  }
+}
+
+function renderSuggestions() {
+  const recherche = document.getElementById('filtreSuggestion').value.trim().toLowerCase();
+  const rows = allSuggestions.filter(s => {
+    if (!recherche) return true;
+    const hay = [s.nom_client, s.agence, s.texte].join(' ').toLowerCase();
+    return hay.includes(recherche);
+  });
+
+  const tbody = document.getElementById('suggestionsBody');
+  tbody.innerHTML = rows.map(s => `
+    <tr>
+      <td>${new Date(s.date_creation).toLocaleDateString('fr-FR')}</td>
+      <td>${escapeHtml(s.nom_client || 'Anonyme')}</td>
+      <td>${escapeHtml(s.agence || '—')}</td>
+      <td>${escapeHtml(s.texte)}</td>
+    </tr>
+  `).join('');
+  document.getElementById('suggestionsEmptyState').style.display = rows.length === 0 ? 'block' : 'none';
+}
+
+let allAvis = [];
+async function chargerAvis() {
+  try {
+    const r = await fetch(`${SB_URL}/rest/v1/avis?select=*&order=date_creation.desc`, {
+      headers: {'apikey': SB_KEY, 'Authorization': 'Bearer ' + currentSession}
+    });
+    if (!r.ok) throw new Error('Erreur HTTP ' + r.status);
+    allAvis = await r.json();
+    renderAvis();
+  } catch (e) {
+    console.error('Erreur chargerAvis:', e);
+  }
+}
+
+function etoiles(note) {
+  return '★'.repeat(note) + '☆'.repeat(5 - note);
+}
+
+function renderAvis() {
+  const recherche = document.getElementById('filtreAvis').value.trim().toLowerCase();
+  const rows = allAvis.filter(a => {
+    if (!recherche) return true;
+    const hay = [a.nom_client, a.agence, a.commentaire].join(' ').toLowerCase();
+    return hay.includes(recherche);
+  });
+
+  const tbody = document.getElementById('avisBody');
+  tbody.innerHTML = rows.map(a => `
+    <tr>
+      <td>${new Date(a.date_creation).toLocaleDateString('fr-FR')}</td>
+      <td>${escapeHtml(a.nom_client || 'Anonyme')}</td>
+      <td>${escapeHtml(a.agence)}</td>
+      <td style="color:var(--gold)">${etoiles(a.note)}</td>
+      <td>${escapeHtml(a.commentaire || '—')}</td>
+    </tr>
+  `).join('');
+  document.getElementById('avisEmptyState').style.display = rows.length === 0 ? 'block' : 'none';
+
+  const noteMoyenne = allAvis.length > 0 ? (allAvis.reduce((sum, a) => sum + a.note, 0) / allAvis.length) : null;
+  document.getElementById('kpiNoteMoyenne').textContent = noteMoyenne !== null ? noteMoyenne.toFixed(1) + ' / 5' : '—';
+  document.getElementById('kpiNombreAvis').textContent = allAvis.length;
 }
 
 function heuresEcoulees(dateCreation) {
