@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Coris Mésofinance CI — Réclamations</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+:root{--navy:#1A3A7A;--blue:#1A5CA8;--red:#CC0000;--gold:#C8A84B;--navy-light:#e8eef7;--bg:#F5F7FA;--white:#fff;--text:#1a2535;--muted:#6b7a99;--border:#dde3ef;--success:#16a34a;--orange:#f59e0b;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+
+/* HONEYPOT (piège anti-spam, invisible pour un humain) */
+.hp-field{position:absolute;left:-9999px;top:-9999px;}
+
+/* LOGIN / PUBLIC SHELL */
+.center-page{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--navy) 0%,var(--blue) 100%);padding:20px;}
+.center-box{background:white;border-radius:16px;padding:36px;width:100%;max-width:480px;box-shadow:0 20px 60px rgba(0,0,0,.2);}
+.center-logo{display:flex;align-items:center;gap:12px;margin-bottom:24px;}
+.logo-fallback{width:44px;height:44px;background:var(--navy);border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;color:var(--gold);flex-shrink:0;}
+.center-title{font-size:21px;font-weight:700;color:var(--navy);margin-bottom:4px;}
+.center-sub{font-size:13px;color:var(--muted);margin-bottom:24px;}
+.form-group{display:flex;flex-direction:column;gap:5px;margin-bottom:16px;}
+.form-group label{font-size:11px;font-weight:600;color:var(--navy);text-transform:uppercase;letter-spacing:.5px;}
+.required::after{content:' *';color:var(--red);}
+input,select,textarea{padding:11px 13px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:'Inter',sans-serif;color:var(--text);background:var(--bg);transition:border-color .15s;width:100%;}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(26,92,168,.1);background:#fff;}
+textarea{resize:vertical;min-height:90px;}
+select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236b7a99' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 13px center;padding-right:34px;}
+.checkbox-row{display:flex;align-items:center;gap:8px;margin-bottom:16px;}
+.checkbox-row input{width:auto;}
+.checkbox-row label{font-size:13px;color:var(--text);text-transform:none;font-weight:500;}
+.btn-primary{background:var(--navy);color:#fff;border:none;padding:13px 24px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;transition:all .15s;width:100%;margin-top:8px;display:flex;align-items:center;justify-content:center;gap:8px;}
+.btn-primary:hover{background:var(--blue);}
+.btn-primary:disabled{background:var(--muted);cursor:not-allowed;}
+.btn-secondary{background:none;border:1.5px solid var(--border);color:var(--text);padding:12px 20px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;width:100%;margin-top:10px;}
+.btn-secondary:hover{border-color:var(--blue);color:var(--blue);}
+.form-error{background:#fef2f2;border:1px solid #fecaca;color:#991b1b;padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:16px;display:none;}
+.center-footer{text-align:center;margin-top:20px;font-size:12px;color:var(--muted);}
+.center-footer a{color:var(--blue);text-decoration:none;}
+.spinner{width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* CONFIRMATION */
+.confirm-icon{font-size:48px;text-align:center;margin-bottom:12px;}
+.confirm-ref{background:var(--navy-light);border:1.5px dashed var(--navy);border-radius:10px;padding:16px;text-align:center;margin:16px 0;}
+.confirm-ref-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;}
+.confirm-ref-value{font-size:22px;font-weight:700;color:var(--navy);letter-spacing:1px;}
+
+/* HEADER (staff) */
+header{background:var(--navy);padding:0 20px;display:flex;align-items:center;justify-content:space-between;height:62px;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(26,58,122,.2);}
+.header-logo{display:flex;align-items:center;gap:12px;}
+.header-info .header-title{color:#fff;font-size:14px;font-weight:600;}
+.header-info .header-sub{color:rgba(255,255,255,.5);font-size:11px;}
+.header-right{display:flex;align-items:center;gap:12px;}
+.user-badge{display:flex;flex-direction:column;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:6px;padding:5px 12px;}
+.user-badge-name{color:white;font-size:12px;font-weight:500;}
+.user-badge-role{color:var(--gold);font-size:10px;font-weight:600;text-transform:uppercase;}
+.logout-btn{background:rgba(204,0,0,.3);border:1px solid rgba(204,0,0,.5);color:white;padding:7px 14px;border-radius:6px;font-size:12px;cursor:pointer;font-family:'Inter',sans-serif;}
+.logout-btn:hover{background:var(--red);}
+
+/* MAIN (staff) */
+.main{max-width:1180px;margin:0 auto;padding:24px 18px 70px;}
+.section-title{font-size:19px;font-weight:700;color:var(--navy);margin-bottom:3px;}
+.section-desc{font-size:13px;color:var(--muted);margin-bottom:20px;}
+.card{background:var(--white);border-radius:12px;border:1px solid var(--border);padding:20px;margin-bottom:18px;}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;}
+.kpi-card{background:var(--white);border:1px solid var(--border);border-radius:10px;padding:16px;border-top:3px solid var(--navy);}
+.kpi-card.blue{border-top-color:var(--blue);}
+.kpi-card.gold{border-top-color:var(--gold);}
+.kpi-card.red{border-top-color:var(--red);}
+.kpi-label{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;}
+.kpi-value{font-size:22px;font-weight:700;color:var(--navy);}
+.filter-bar{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
+.filter-bar select,.filter-bar input{width:auto;flex:1;min-width:160px;font-size:12px;padding:9px 12px;}
+.table-wrap{overflow-x:auto;border-radius:10px;border:1px solid var(--border);}
+table{width:100%;border-collapse:collapse;font-size:12px;}
+thead{background:var(--navy);color:#fff;}
+th{padding:10px 12px;text-align:left;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;}
+td{padding:10px 12px;border-bottom:1px solid var(--border);white-space:nowrap;}
+tr.data-row{cursor:pointer;}
+tr:last-child td{border-bottom:none;}
+tr.data-row:hover td{background:var(--navy-light);}
+tr.retard-orange td{background:#fffbeb;}
+tr.retard-rouge td{background:#fef2f2;}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:600;white-space:nowrap;}
+.badge-nouveau{background:#e0f2fe;color:#075985;}
+.badge-assigne{background:#fef9ee;color:#92400e;}
+.badge-pris_en_charge{background:#f3e8ff;color:#6b21a8;}
+.badge-en_traitement{background:#dbeafe;color:#1e40af;}
+.badge-resolu{background:#f0fdf4;color:#15803d;}
+.badge-clos{background:#f1f5f9;color:#475569;}
+.badge-urgent{background:var(--red);color:#fff;}
+.empty-state{text-align:center;padding:50px 20px;color:var(--muted);}
+.empty-icon{font-size:34px;margin-bottom:10px;}
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(100px);padding:12px 22px;border-radius:10px;font-size:13px;font-weight:500;box-shadow:0 8px 24px rgba(0,0,0,.2);transition:transform .3s;z-index:999;white-space:nowrap;color:#fff;}
+.toast.show{transform:translateX(-50%) translateY(0);}
+.toast.success{background:var(--success);}
+.toast.error{background:var(--red);}
+.toast.info{background:var(--navy);}
+
+/* MODAL DETAIL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:300;padding:20px;}
+.modal-overlay.show{display:flex;}
+.modal-box{background:white;border-radius:16px;padding:28px;width:100%;max-width:620px;max-height:88vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2);}
+.modal-title{font-size:18px;font-weight:700;color:var(--navy);margin-bottom:4px;}
+.modal-sub{font-size:12px;color:var(--muted);margin-bottom:18px;}
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px;}
+.detail-item{background:var(--bg);border-radius:8px;padding:10px 12px;}
+.detail-item-label{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;}
+.detail-item-value{font-size:13px;color:var(--text);font-weight:500;word-break:break-word;}
+.detail-item.full{grid-column:1/-1;}
+.hist-item{border-left:2px solid var(--border);padding:6px 0 6px 12px;margin-bottom:4px;font-size:12px;}
+.hist-item-meta{color:var(--muted);font-size:11px;}
+.modal-close{position:absolute;top:16px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted);}
+.modal-box{position:relative;}
+
+@media(max-width:700px){.kpi-row{grid-template-columns:1fr 1fr;}.detail-grid{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+
+<!-- ============ FORMULAIRE PUBLIC ============ -->
+<div id="publicPage" class="center-page">
+  <div class="center-box">
+    <div class="center-logo">
+      <div class="logo-fallback">CM</div>
+      <div>
+        <div class="center-title" style="margin-bottom:0">Coris Mésofinance CI</div>
+        <div class="center-sub" style="margin-bottom:0">Déposer une réclamation</div>
+      </div>
+    </div>
+    <div class="form-error" id="pubError"></div>
+    <div class="form-group">
+      <label class="required">Nom complet</label>
+      <input type="text" id="pubNom" placeholder="Votre nom et prénom">
+    </div>
+    <div class="form-group">
+      <label class="required">Téléphone</label>
+      <input type="tel" id="pubTel" placeholder="Ex: 07 00 00 00 00">
+    </div>
+    <div class="form-group">
+      <label>Email (optionnel)</label>
+      <input type="email" id="pubEmail" placeholder="votre.email@exemple.com">
+    </div>
+    <div class="form-group">
+      <label>Numéro de compte (optionnel)</label>
+      <input type="text" id="pubCompte" placeholder="Si vous êtes déjà client">
+    </div>
+    <div class="form-group">
+      <label class="required">Agence concernée</label>
+      <input type="text" id="pubAgence" placeholder="Ex: Agence Plateau, Adjamé...">
+    </div>
+    <div class="form-group">
+      <label class="required">Nature de la réclamation</label>
+      <select id="pubType">
+        <option value="accueil">Accueil / Service client</option>
+        <option value="credit">Crédit</option>
+        <option value="epargne">Épargne</option>
+        <option value="mobile_money">Mobile Money</option>
+        <option value="personnel">Comportement d'un agent</option>
+        <option value="autre">Autre</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="required">Description</label>
+      <textarea id="pubDesc" placeholder="Décrivez votre réclamation le plus précisément possible..."></textarea>
+    </div>
+    <div class="checkbox-row">
+      <input type="checkbox" id="pubUrgent">
+      <label for="pubUrgent">Cette réclamation est urgente</label>
+    </div>
+    <!-- Piège anti-spam : un humain ne remplit jamais ce champ -->
+    <div class="hp-field" aria-hidden="true">
+      <input type="text" id="pubWebsite" name="website" tabindex="-1" autocomplete="off">
+    </div>
+    <button class="btn-primary" id="pubBtn" onclick="soumettreReclamation()">Envoyer ma réclamation</button>
+    <div class="center-footer">Coris Mésofinance Côte d'Ivoire — <a href="#admin">Espace collaborateur</a></div>
+  </div>
+</div>
+
+<!-- ============ CONFIRMATION ============ -->
+<div id="confirmPage" class="center-page" style="display:none">
+  <div class="center-box">
+    <div class="confirm-icon">✅</div>
+    <div class="center-title" style="text-align:center">Réclamation enregistrée</div>
+    <div class="center-sub" style="text-align:center">Merci, votre demande a bien été prise en compte.</div>
+    <div class="confirm-ref">
+      <div class="confirm-ref-label">Votre référence</div>
+      <div class="confirm-ref-value" id="confirmRefValue">—</div>
+    </div>
+    <div class="center-sub" style="text-align:center;margin-bottom:0">Conservez cette référence, elle vous permettra de suivre votre dossier.</div>
+    <button class="btn-secondary" onclick="nouvelleReclamation()">Déposer une autre réclamation</button>
+  </div>
+</div>
+
+<!-- ============ LOGIN STAFF ============ -->
+<div id="loginPage" class="center-page" style="display:none">
+  <div class="center-box">
+    <div class="center-logo">
+      <div class="logo-fallback">CM</div>
+      <div>
+        <div class="center-title" style="margin-bottom:0">Espace collaborateur</div>
+        <div class="center-sub" style="margin-bottom:0">Coris Mésofinance CI — Réclamations</div>
+      </div>
+    </div>
+    <div class="form-error" id="loginError"></div>
+    <div class="form-group">
+      <label>Email professionnel</label>
+      <input type="email" id="loginEmail" placeholder="votre.email@coris-mesofinance.com" autocomplete="email">
+    </div>
+    <div class="form-group">
+      <label>Mot de passe</label>
+      <input type="password" id="loginPwd" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <button class="btn-primary" id="loginBtn" onclick="doLogin()">Se connecter</button>
+    <div class="center-footer"><a href="#">← Retour au formulaire client</a></div>
+  </div>
+</div>
+
+<!-- ============ APP STAFF ============ -->
+<div id="appPage" style="display:none">
+  <header>
+    <div class="header-logo">
+      <div class="logo-fallback">CM</div>
+      <div class="header-info">
+        <div class="header-title">Coris Mésofinance Côte d'Ivoire</div>
+        <div class="header-sub">Suivi des réclamations</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="user-badge">
+        <div class="user-badge-name" id="userBadgeName">—</div>
+        <div class="user-badge-role" id="userBadgeRole">—</div>
+      </div>
+      <button class="logout-btn" onclick="doLogout()">Déconnexion</button>
+    </div>
+  </header>
+
+  <div class="main">
+    <div class="section-title">Tableau de bord réclamations</div>
+    <div class="section-desc">Suivi, filtrage et traitement des réclamations clients.</div>
+
+    <div class="kpi-row">
+      <div class="kpi-card"><div class="kpi-label">Nouvelles</div><div class="kpi-value" id="kpiNouvelles">0</div></div>
+      <div class="kpi-card blue"><div class="kpi-label">En cours</div><div class="kpi-value" id="kpiEnCours">0</div></div>
+      <div class="kpi-card" style="border-top-color:var(--success)"><div class="kpi-label">Résolues</div><div class="kpi-value" id="kpiResolues">0</div></div>
+      <div class="kpi-card red"><div class="kpi-label">En retard</div><div class="kpi-value" id="kpiRetard">0</div></div>
+    </div>
+
+    <div class="card">
+      <div class="filter-bar">
+        <input type="text" id="filtreRecherche" placeholder="Rechercher (nom, référence, téléphone, agence)..." oninput="renderTable()">
+        <select id="filtreStatut" onchange="renderTable()">
+          <option value="">Tous les statuts</option>
+          <option value="nouveau">Nouveau</option>
+          <option value="assigne">Assigné</option>
+          <option value="pris_en_charge">Pris en charge</option>
+          <option value="en_traitement">En traitement</option>
+          <option value="resolu">Résolu</option>
+          <option value="clos">Clos</option>
+        </select>
+        <select id="filtreType" onchange="renderTable()">
+          <option value="">Toutes natures</option>
+          <option value="accueil">Accueil / Service</option>
+          <option value="credit">Crédit</option>
+          <option value="epargne">Épargne</option>
+          <option value="mobile_money">Mobile Money</option>
+          <option value="personnel">Personnel</option>
+          <option value="autre">Autre</option>
+        </select>
+        <select id="filtreUrgence" onchange="renderTable()">
+          <option value="">Urgence: toutes</option>
+          <option value="urgent">Urgentes seulement</option>
+        </select>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Référence</th>
+              <th>Date</th>
+              <th>Client</th>
+              <th>Agence</th>
+              <th>Nature</th>
+              <th>Statut</th>
+              <th>Urgence</th>
+              <th>Assigné à</th>
+              <th>Délai</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+      <div class="empty-state" id="emptyState" style="display:none">
+        <div class="empty-icon">📭</div>
+        <div>Aucune réclamation ne correspond aux filtres.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MODAL DÉTAIL / WORKFLOW ============ -->
+<div class="modal-overlay" id="detailModal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeDetailModal()">✕</button>
+    <div class="modal-title" id="detailRef">—</div>
+    <div class="modal-sub" id="detailDate">—</div>
+
+    <div class="detail-grid">
+      <div class="detail-item"><div class="detail-item-label">Client</div><div class="detail-item-value" id="detailNom">—</div></div>
+      <div class="detail-item"><div class="detail-item-label">Téléphone</div><div class="detail-item-value" id="detailTel">—</div></div>
+      <div class="detail-item"><div class="detail-item-label">Email</div><div class="detail-item-value" id="detailEmail">—</div></div>
+      <div class="detail-item"><div class="detail-item-label">N° compte</div><div class="detail-item-value" id="detailCompte">—</div></div>
+      <div class="detail-item"><div class="detail-item-label">Agence</div><div class="detail-item-value" id="detailAgence">—</div></div>
+      <div class="detail-item"><div class="detail-item-label">Nature</div><div class="detail-item-value" id="detailType">—</div></div>
+      <div class="detail-item full"><div class="detail-item-label">Description</div><div class="detail-item-value" id="detailDesc">—</div></div>
+    </div>
+
+    <div class="form-group">
+      <label>Statut</label>
+      <select id="editStatut">
+        <option value="nouveau">Nouveau</option>
+        <option value="assigne">Assigné</option>
+        <option value="pris_en_charge">Pris en charge</option>
+        <option value="en_traitement">En traitement</option>
+        <option value="resolu">Résolu</option>
+        <option value="clos">Clos</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Niveau d'urgence</label>
+      <select id="editUrgence">
+        <option value="normal">Normal</option>
+        <option value="urgent">Urgent</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Assigné à</label>
+      <input type="text" id="editAssigne" placeholder="Nom du service ou du collaborateur">
+    </div>
+    <div class="form-group">
+      <label>Commentaire (facultatif, ajouté à l'historique)</label>
+      <textarea id="editCommentaire" placeholder="Ex: Client recontacté, dossier transmis au service crédit..."></textarea>
+    </div>
+    <button class="btn-primary" id="saveDetailBtn" onclick="saveDetail()">✅ Enregistrer</button>
+
+    <div style="margin-top:20px">
+      <div class="detail-item-label" style="margin-bottom:8px">Historique</div>
+      <div id="detailHistorique"></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SB_URL = "https://pqsczevlnvdayelkjtmq.supabase.co";
+const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBxc2N6ZXZsbnZkYXllbGtqdG1xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI5OTk2MTksImV4cCI6MjA5ODU3NTYxOX0.7hW7uqXrFXh0mvjzttxagBgto0gc0dWr8XH7XknChBQ";
+
+const STATUT_ORDER = ['nouveau','assigne','pris_en_charge','en_traitement','resolu','clos'];
+const STATUT_LABELS = {nouveau:'Nouveau',assigne:'Assigné',pris_en_charge:'Pris en charge',en_traitement:'En traitement',resolu:'Résolu',clos:'Clos'};
+const TYPE_LABELS = {accueil:'Accueil / Service client',credit:'Crédit',epargne:'Épargne',mobile_money:'Mobile Money',personnel:"Comportement d'un agent",autre:'Autre'};
+
+let currentSession = null;
+let currentUser = null;
+let allReclamations = [];
+let selectedId = null;
+
+// ====== ROUTAGE ======
+function route() {
+  const hash = location.hash;
+  document.getElementById('publicPage').style.display = 'none';
+  document.getElementById('confirmPage').style.display = 'none';
+  document.getElementById('loginPage').style.display = 'none';
+  document.getElementById('appPage').style.display = 'none';
+
+  if (hash === '#admin') {
+    const saved = sessionStorage.getItem('cr_session');
+    if (saved) {
+      try {
+        const data = JSON.parse(saved);
+        currentSession = data.token;
+        currentUser = data.user;
+        showApp();
+        return;
+      } catch(e) {}
+    }
+    document.getElementById('loginPage').style.display = 'flex';
+  } else {
+    document.getElementById('publicPage').style.display = 'flex';
+  }
+}
+window.addEventListener('hashchange', route);
+window.addEventListener('DOMContentLoaded', route);
+
+// ====== TOAST ======
+function toast(msg, type) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show ' + (type || 'info');
+  setTimeout(() => { el.className = 'toast'; }, 3500);
+}
+
+// ====== FORMULAIRE PUBLIC ======
+async function soumettreReclamation() {
+  const errEl = document.getElementById('pubError');
+  errEl.style.display = 'none';
+
+  // Honeypot : un bot remplit ce champ invisible, on ignore silencieusement
+  if (document.getElementById('pubWebsite').value.trim() !== '') {
+    document.getElementById('confirmRefValue').textContent = '—';
+    document.getElementById('publicPage').style.display = 'none';
+    document.getElementById('confirmPage').style.display = 'flex';
+    return;
+  }
+
+  const nom = document.getElementById('pubNom').value.trim();
+  const tel = document.getElementById('pubTel').value.trim();
+  const email = document.getElementById('pubEmail').value.trim();
+  const compte = document.getElementById('pubCompte').value.trim();
+  const agence = document.getElementById('pubAgence').value.trim();
+  const type = document.getElementById('pubType').value;
+  const desc = document.getElementById('pubDesc').value.trim();
+  const urgent = document.getElementById('pubUrgent').checked;
+
+  if (!nom || !tel || !agence || !desc) {
+    errEl.textContent = 'Veuillez renseigner tous les champs obligatoires (*).';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  const btn = document.getElementById('pubBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div> Envoi en cours...';
+
+  try {
+    const r = await fetch(`${SB_URL}/rest/v1/rpc/soumettre_reclamation`, {
+      method: 'POST',
+      headers: {'apikey': SB_KEY, 'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        p_nom_client: nom,
+        p_telephone: tel,
+        p_email: email,
+        p_numero_compte: compte,
+        p_agence: agence,
+        p_type_plainte: type,
+        p_description: desc,
+        p_niveau_urgence: urgent ? 'urgent' : 'normal'
+      })
+    });
+    if (!r.ok) throw new Error('Erreur HTTP ' + r.status);
+    const reference = await r.json();
+    if (!reference) throw new Error('Réponse invalide du serveur.');
+
+    document.getElementById('confirmRefValue').textContent = reference;
+    document.getElementById('publicPage').style.display = 'none';
+    document.getElementById('confirmPage').style.display = 'flex';
+  } catch (e) {
+    errEl.textContent = "Erreur lors de l'envoi : " + e.message + ". Veuillez réessayer.";
+    errEl.style.display = 'block';
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = 'Envoyer ma réclamation';
+}
+
+function nouvelleReclamation() {
+  ['pubNom','pubTel','pubEmail','pubCompte','pubAgence','pubDesc','pubWebsite'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('pubType').value = 'accueil';
+  document.getElementById('pubUrgent').checked = false;
+  document.getElementById('confirmPage').style.display = 'none';
+  document.getElementById('publicPage').style.display = 'flex';
+}
+
+// ====== AUTH STAFF ======
+async function sbAuth(email, password) {
+  const r = await fetch(`${SB_URL}/auth/v1/token?grant_type=password`, {
+    method: 'POST',
+    headers: {'apikey': SB_KEY, 'Content-Type': 'application/json'},
+    body: JSON.stringify({email, password})
+  });
+  return r.json();
+}
+
+async function sbSignOut(token) {
+  await fetch(`${SB_URL}/auth/v1/logout`, {
+    method: 'POST',
+    headers: {'apikey': SB_KEY, 'Authorization': 'Bearer ' + token}
+  });
+}
+
+async function getProfile(userId, token) {
+  try {
+    const r = await fetch(`${SB_URL}/rest/v1/profiles?id=eq.${userId}&select=*`, {
+      headers: {'apikey': SB_KEY, 'Authorization': 'Bearer ' + token}
+    });
+    if (!r.ok) throw new Error('Erreur HTTP ' + r.status);
+    const data = await r.json();
+    if (!Array.isArray(data) || data.length === 0) return null;
+    return data[0];
+  } catch (e) {
+    console.error('Erreur getProfile:', e);
+    return null;
+  }
+}
+
+async function doLogin() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const pwd = document.getElementById('loginPwd').value;
+  const errEl = document.getElementById('loginError');
+  const btn = document.getElementById('loginBtn');
+
+  if (!email || !pwd) {
+    errEl.textContent = 'Veuillez renseigner votre email et mot de passe.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div> Connexion...';
+  errEl.style.display = 'none';
+
+  try {
+    const data = await sbAuth(email, pwd);
+    if (data.error) throw new Error(data.error_description || data.error);
+    if (!data.access_token) throw new Error('Échec de connexion. Vérifiez vos identifiants.');
+    if (!data.user) throw new Error('Utilisateur introuvable.');
+
+    currentSession = data.access_token;
+    const profile = await getProfile(data.user.id, currentSession);
+
+    if (!profile) throw new Error('Profil introuvable. Contactez un administrateur.');
+    if (profile.actif === false) throw new Error('Compte désactivé. Contactez un administrateur.');
+
+    currentUser = profile;
+    sessionStorage.setItem('cr_session', JSON.stringify({token: currentSession, user: profile}));
+
+    showApp();
+  } catch (e) {
+    errEl.textContent = 'Erreur : ' + e.message;
+    errEl.style.display = 'block';
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = 'Se connecter';
+}
+
+async function doLogout() {
+  if (currentSession) { try { await sbSignOut(currentSession); } catch (e) {} }
+  sessionStorage.removeItem('cr_session');
+  currentSession = null;
+  currentUser = null;
+  location.hash = '';
+  document.getElementById('appPage').style.display = 'none';
+  route();
+}
+
+function showApp() {
+  document.getElementById('loginPage').style.display = 'none';
+  document.getElementById('confirmPage').style.display = 'none';
+  document.getElementById('publicPage').style.display = 'none';
+  document.getElementById('appPage').style.display = 'block';
+  document.getElementById('userBadgeName').textContent = currentUser.nom || currentUser.email || '—';
+  document.getElementById('userBadgeRole').textContent = currentUser.role || '—';
+  chargerReclamations();
+}
+
+// ====== DONNÉES ======
+async function chargerReclamations() {
+  try {
+    const r = await fetch(`${SB_URL}/rest/v1/reclamations?select=*&order=date_creation.desc`, {
+      headers: {'apikey': SB_KEY, 'Authorization': 'Bearer ' + currentSession}
+    });
+    if (!r.ok) throw new Error('Erreur HTTP ' + r.status);
+    allReclamations = await r.json();
+    renderKpis();
+    renderTable();
+  } catch (e) {
+    toast('Erreur de chargement : ' + e.message, 'error');
+  }
+}
+
+function heuresEcoulees(dateCreation) {
+  return (Date.now() - new Date(dateCreation).getTime()) / 3600000;
+}
+
+function niveauRetard(rec) {
+  if (rec.statut === 'resolu' || rec.statut === 'clos') return null;
+  const h = heuresEcoulees(rec.date_creation);
+  if (h > 72) return 'rouge';
+  if (h > 48) return 'orange';
+  return null;
+}
+
+function renderKpis() {
+  const nouvelles = allReclamations.filter(r => r.statut === 'nouveau').length;
+  const enCours = allReclamations.filter(r => ['assigne','pris_en_charge','en_traitement'].includes(r.statut)).length;
+  const resolues = allReclamations.filter(r => ['resolu','clos'].includes(r.statut)).length;
+  const retard = allReclamations.filter(r => niveauRetard(r) !== null).length;
+
+  document.getElementById('kpiNouvelles').textContent = nouvelles;
+  document.getElementById('kpiEnCours').textContent = enCours;
+  document.getElementById('kpiResolues').textContent = resolues;
+  document.getElementById('kpiRetard').textContent = retard;
+}
+
+function renderTable() {
+  const recherche = document.getElementById('filtreRecherche').value.trim().toLowerCase();
+  const fStatut = document.getElementById('filtreStatut').value;
+  const fType = document.getElementById('filtreType').value;
+  const fUrgence = document.getElementById('filtreUrgence').value;
+
+  let rows = allReclamations.filter(r => {
+    if (fStatut && r.statut !== fStatut) return false;
+    if (fType && r.type_plainte !== fType) return false;
+    if (fUrgence && r.niveau_urgence !== fUrgence) return false;
+    if (recherche) {
+      const hay = [r.nom_client, r.reference, r.telephone, r.agence].join(' ').toLowerCase();
+      if (!hay.includes(recherche)) return false;
+    }
+    return true;
+  });
+
+  const tbody = document.getElementById('tableBody');
+  tbody.innerHTML = '';
+  document.getElementById('emptyState').style.display = rows.length === 0 ? 'block' : 'none';
+
+  rows.forEach(r => {
+    const retard = niveauRetard(r);
+    const tr = document.createElement('tr');
+    tr.className = 'data-row' + (retard === 'rouge' ? ' retard-rouge' : retard === 'orange' ? ' retard-orange' : '');
+    tr.onclick = () => openDetailModal(r.id);
+    tr.innerHTML = `
+      <td><strong>${r.reference || '—'}</strong></td>
+      <td>${new Date(r.date_creation).toLocaleDateString('fr-FR')}</td>
+      <td>${escapeHtml(r.nom_client)}</td>
+      <td>${escapeHtml(r.agence)}</td>
+      <td>${TYPE_LABELS[r.type_plainte] || r.type_plainte}</td>
+      <td><span class="badge badge-${r.statut}">${STATUT_LABELS[r.statut] || r.statut}</span></td>
+      <td>${r.niveau_urgence === 'urgent' ? '<span class="badge badge-urgent">URGENT</span>' : '—'}</td>
+      <td>${escapeHtml(r.assigne_a || '—')}</td>
+      <td>${retard === 'rouge' ? '⛔ +72h' : retard === 'orange' ? '⚠️ +48h' : 'OK'}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// ====== MODAL DÉTAIL / WORKFLOW ======
+function openDetailModal(id) {
+  const rec = allReclamations.find(r => r.id === id);
+  if (!rec) return;
+  selectedId = id;
+
+  document.getElementById('detailRef').textContent = rec.reference || '—';
+  document.getElementById('detailDate').textContent = 'Déposée le ' + new Date(rec.date_creation).toLocaleString('fr-FR');
+  document.getElementById('detailNom').textContent = rec.nom_client || '—';
+  document.getElementById('detailTel').textContent = rec.telephone || '—';
+  document.getElementById('detailEmail').textContent = rec.email || '—';
+  document.getElementById('detailCompte').textContent = rec.numero_compte || '—';
+  document.getElementById('detailAgence').textContent = rec.agence || '—';
+  document.getElementById('detailType').textContent = TYPE_LABELS[rec.type_plainte] || rec.type_plainte;
+  document.getElementById('detailDesc').textContent = rec.description || '—';
+
+  document.getElementById('editStatut').value = rec.statut;
+  document.getElementById('editUrgence').value = rec.niveau_urgence;
+  document.getElementById('editAssigne').value = rec.assigne_a || '';
+  document.getElementById('editCommentaire').value = '';
+
+  const histEl = document.getElementById('detailHistorique');
+  const hist = Array.isArray(rec.historique) ? rec.historique : [];
+  if (hist.length === 0) {
+    histEl.innerHTML = '<div style="font-size:12px;color:var(--muted)">Aucun changement de statut enregistré pour le moment.</div>';
+  } else {
+    histEl.innerHTML = hist.slice().reverse().map(h => `
+      <div class="hist-item">
+        <div>${STATUT_LABELS[h.ancien_statut] || h.ancien_statut || '—'} → <strong>${STATUT_LABELS[h.nouveau_statut] || h.nouveau_statut}</strong></div>
+        <div class="hist-item-meta">${new Date(h.date).toLocaleString('fr-FR')} — ${escapeHtml(h.auteur || '—')}${h.commentaire ? ' — ' + escapeHtml(h.commentaire) : ''}</div>
+      </div>
+    `).join('');
+  }
+
+  document.getElementById('detailModal').classList.add('show');
+}
+
+function closeDetailModal() {
+  document.getElementById('detailModal').classList.remove('show');
+  selectedId = null;
+}
+
+async function saveDetail() {
+  if (!selectedId) return;
+  const rec = allReclamations.find(r => r.id === selectedId);
+  if (!rec) return;
+
+  const nouveauStatut = document.getElementById('editStatut').value;
+  const nouvelleUrgence = document.getElementById('editUrgence').value;
+  const nouvelAssigne = document.getElementById('editAssigne').value.trim();
+  const commentaire = document.getElementById('editCommentaire').value.trim();
+
+  const btn = document.getElementById('saveDetailBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div> Enregistrement...';
+
+  try {
+    const hist = Array.isArray(rec.historique) ? rec.historique.slice() : [];
+    if (nouveauStatut !== rec.statut) {
+      hist.push({
+        date: new Date().toISOString(),
+        auteur: currentUser.nom || currentUser.email,
+        ancien_statut: rec.statut,
+        nouveau_statut: nouveauStatut,
+        commentaire: commentaire || null
+      });
+    }
+
+    const body = {
+      statut: nouveauStatut,
+      niveau_urgence: nouvelleUrgence,
+      assigne_a: nouvelAssigne || null,
+      date_derniere_maj: new Date().toISOString(),
+      historique: hist
+    };
+
+    const r = await fetch(`${SB_URL}/rest/v1/reclamations?id=eq.${selectedId}`, {
+      method: 'PATCH',
+      headers: {
+        'apikey': SB_KEY,
+        'Authorization': 'Bearer ' + currentSession,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify(body)
+    });
+    if (!r.ok) throw new Error('Erreur HTTP ' + r.status);
+
+    toast('Réclamation mise à jour.', 'success');
+    closeDetailModal();
+    await chargerReclamations();
+  } catch (e) {
+    toast('Erreur : ' + e.message, 'error');
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = '✅ Enregistrer';
+}
+</script>
+</body>
+</html>
