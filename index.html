@@ -148,6 +148,7 @@ tr.retard-rouge td{background:#fef2f2;}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 </head>
 <body>
 
@@ -543,6 +544,11 @@ tr.retard-rouge td{background:#fef2f2;}
 <script>
 const SB_URL = "https://pqsczevlnvdayelkjtmq.supabase.co";
 const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBxc2N6ZXZsbnZkYXllbGtqdG1xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI5OTk2MTksImV4cCI6MjA5ODU3NTYxOX0.7hW7uqXrFXh0mvjzttxagBgto0gc0dWr8XH7XknChBQ";
+
+const EMAILJS_PUBLIC_KEY = "1TtAEtaW_g57xPrG_";
+const EMAILJS_SERVICE_ID = "service_vcv1p5f";
+const EMAILJS_TEMPLATE_ASSIGNATION = "template_j4c3ihr";
+emailjs.init({publicKey: EMAILJS_PUBLIC_KEY});
 
 const STATUT_ORDER = ['nouveau','assigne','pris_en_charge','en_traitement','resolu','clos'];
 const STATUT_LABELS = {nouveau:'Nouveau',assigne:'Assigné',pris_en_charge:'Pris en charge',en_traitement:'En traitement',resolu:'Résolu',clos:'Clos'};
@@ -1291,17 +1297,13 @@ async function notifierAssignation(rec, nomAssigne) {
   const profil = staffProfiles.find(p => p.nom === nomAssigne);
   if (!profil || !profil.email) return;
   try {
-    await fetch(`${SB_URL}/functions/v1/notifier-assignation`, {
-      method: 'POST',
-      headers: {'apikey': SB_KEY, 'Authorization': 'Bearer ' + currentSession, 'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        destinataire_email: profil.email,
-        destinataire_nom: profil.nom,
-        reference: rec.reference,
-        agence: rec.agence,
-        type_plainte: TYPE_LABELS[rec.type_plainte] || rec.type_plainte,
-        description: rec.description
-      })
+    await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ASSIGNATION, {
+      to_email: profil.email,
+      to_name: profil.nom,
+      reference: rec.reference,
+      agence: rec.agence,
+      type_plainte: TYPE_LABELS[rec.type_plainte] || rec.type_plainte,
+      description: rec.description
     });
   } catch (e) {
     console.error('Erreur notification assignation:', e);
