@@ -9,7 +9,7 @@ COULIBALY Badra Ali, Responsable Commercial. Hiérarchie : Chef d'agence KOUADIO
 - Frontend : `index.html` unique (HTML/CSS/JS vanilla), même pattern que Coris-Point-Hebdo et CréditTrack-Coris
 - Backend : Supabase (nouveau compte/projet dédié — ne pas réutiliser celui des autres apps)
 - Stockage fichiers : Supabase Storage (bucket `pieces-jointes`) — **contrairement aux autres apps Coris**, ici on stocke réellement les pièces jointes (photos, PDF, vidéos) car ce sont des preuves client, pas de restriction "trace documentaire uniquement"
-- Hébergement : GitHub Pages, nouveau dépôt (ex. `Coris-Reclamations`)
+- Hébergement : GitHub Pages, dépôt `CorisMesofinance/Coris-Reclamations` (compte GitHub dédié à l'entreprise, `bcoulibaly@coris-mesofinance.com`) — prod : https://corismesofinance.github.io/Coris-Reclamations/
 - Notifications email/SMS : via Supabase Edge Function (jamais de clé API de service tiers exposée côté client)
 - Couleurs Coris : navy `#1A3A7A`, bleu `#1A5CA8`, gold `#C8A84B`, rouge `#CC0000`. Police Inter.
 
@@ -105,5 +105,5 @@ Recherche par numéro de compte → affichage des réclamations liées à ce cli
 - **Étape 1 livrée** (voir `schema_step1.sql` + `index.html`) : formulaire public de dépôt, génération de référence `PL-YYYYMMDD-00001` et échéance SLA via trigger Postgres, tableau de bord staff (connexion Supabase Auth, liste, filtres, KPI simples, avancement du workflow avec historique JSONB).
 - **Pas encore fait** : pièces jointes (Storage), commentaires dédiés, KPI avancés/graphiques, export Excel, QR code, notifications email/SMS, relances pg_cron.
 - Projet Supabase dédié **créé et configuré** : URL `https://pqsczevlnvdayelkjtmq.supabase.co`, clé anon renseignée dans `index.html` (`SB_URL` / `SB_KEY`), `schema_step1.sql` exécuté, premier compte staff créé (`bcoulibaly@coris-mesofinance.com`, rôle `admin`).
-- Dépôt GitHub créé et poussé : `abadracoulibaly-max/Coris-Reclamations`.
-- ⚠️ **Déploiement GitHub Pages en cours de diagnostic** : les premiers runs du workflow "pages build and deployment" sont restés bloqués en `deployment_queued` puis ont échoué par timeout, sans lien avec le code (le contenu de `index.html`/`CLAUDE.md` est correct). Environnement `github-pages` supprimé et recréé pour repartir sur une base propre. Support GitHub contacté en parallèle.
+- **Dépôt GitHub officiel : `CorisMesofinance/Coris-Reclamations`**, déployé avec succès sur GitHub Pages : https://corismesofinance.github.io/Coris-Reclamations/. Remote git local : `coris`.
+- Historique du déploiement : le dépôt initial `abadracoulibaly-max/Coris-Reclamations` (remote `origin`) est resté bloqué en `deployment_queued` sur GitHub Pages malgré plusieurs tentatives (re-run, reset d'environnement, nouveau commit), sans lien avec le code. Un dépôt de secours `abadracoulibaly-max/Coris-Reclamations-App` (remote `app`) a été créé pour isoler le problème mais souffrait du même blocage — ce qui a mené à tester un compte GitHub totalement différent (`CorisMesofinance`), qui a fonctionné du premier coup. `origin` et `app` peuvent être ignorés/supprimés ; `coris` est le remote de prod à utiliser pour les prochains push.
