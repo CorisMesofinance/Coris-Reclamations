@@ -518,6 +518,7 @@ tr.retard-rouge td{background:#fef2f2;}
       <label>Commentaire (facultatif, ajouté à l'historique)</label>
       <textarea id="editCommentaire" placeholder="Ex: Client recontacté, dossier transmis au service crédit..."></textarea>
     </div>
+    <div class="form-error" id="detailPermissionNote" style="display:none">Cette réclamation ne vous est pas assignée — vous pouvez la consulter mais pas la modifier.</div>
     <button class="btn-primary" id="saveDetailBtn" onclick="saveDetail()">✅ Enregistrer</button>
 
     <div style="margin-top:20px">
@@ -1275,6 +1276,17 @@ function openDetailModal(id) {
   document.getElementById('editUrgence').value = rec.niveau_urgence;
   remplirSelectAssigne(rec.assigne_a);
   document.getElementById('editCommentaire').value = '';
+
+  const estAdmin = currentUser.is_admin === true;
+  const assigneAMoi = rec.assigne_a === (currentUser.nom || '');
+  const peutAgir = estAdmin || assigneAMoi;
+
+  document.getElementById('editStatut').disabled = !peutAgir;
+  document.getElementById('editUrgence').disabled = !peutAgir;
+  document.getElementById('editAssigne').disabled = !estAdmin;
+  document.getElementById('editCommentaire').disabled = !peutAgir;
+  document.getElementById('saveDetailBtn').style.display = peutAgir ? 'flex' : 'none';
+  document.getElementById('detailPermissionNote').style.display = peutAgir ? 'none' : 'block';
 
   const histEl = document.getElementById('detailHistorique');
   const hist = Array.isArray(rec.historique) ? rec.historique : [];

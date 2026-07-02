@@ -57,6 +57,8 @@ created_at      timestamptz default now()
 ### Table `profiles` (staff uniquement — les clients ne se connectent jamais)
 Même structure que les autres apps : `id, email, nom, role, actif, is_admin`. Rôles envisagés : `admin`, `chef_agence`, `dex`, `service_juridique`, `resp_exploitation`.
 
+**Permissions (implémenté, voir `schema_permissions_assignation.sql`)** : `is_admin = true` réservé à COULIBALY Badra Ali, Abdoul Razac LINGANY et Meless Wilfried ESMEL — seuls eux peuvent assigner/réassigner une réclamation et agir sur n'importe laquelle. Les autres profils voient toutes les réclamations (SELECT ouvert à tous) mais ne peuvent modifier (statut, urgence, commentaire) que celles qui leur sont assignées (`assigne_a = leur nom`), et ne peuvent jamais changer l'assignation — appliqué à la fois par une policy RLS UPDATE et un trigger dédié (`verifier_permission_maj_reclamation`), pas seulement côté interface.
+
 ## Workflow des statuts
 ```
 nouveau → assigné → pris_en_charge → en_traitement → résolu → clos
