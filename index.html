@@ -896,6 +896,27 @@ function closeDetailModal() {
   selectedId = null;
 }
 
+async function notifierAssignation(rec, nomAssigne) {
+  const profil = staffProfiles.find(p => p.nom === nomAssigne);
+  if (!profil || !profil.email) return;
+  try {
+    await fetch(`${SB_URL}/functions/v1/notifier-assignation`, {
+      method: 'POST',
+      headers: {'apikey': SB_KEY, 'Authorization': 'Bearer ' + currentSession, 'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        destinataire_email: profil.email,
+        destinataire_nom: profil.nom,
+        reference: rec.reference,
+        agence: rec.agence,
+        type_plainte: TYPE_LABELS[rec.type_plainte] || rec.type_plainte,
+        description: rec.description
+      })
+    });
+  } catch (e) {
+    console.error('Erreur notification assignation:', e);
+  }
+}
+
 async function saveDetail() {
   if (!selectedId) return;
   const rec = allReclamations.find(r => r.id === selectedId);
@@ -941,6 +962,10 @@ async function saveDetail() {
       body: JSON.stringify(body)
     });
     if (!r.ok) throw new Error('Erreur HTTP ' + r.status);
+
+    if (nouvelAssigne && nouvelAssigne !== (rec.assigne_a || '')) {
+      notifierAssignation(rec, nouvelAssigne);
+    }
 
     toast('Réclamation mise à jour.', 'success');
     closeDetailModal();
