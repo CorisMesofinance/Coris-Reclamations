@@ -379,7 +379,9 @@ tr.retard-rouge td{background:#fef2f2;}
     </div>
     <div class="form-group">
       <label>Assigné à</label>
-      <input type="text" id="editAssigne" placeholder="Nom du service ou du collaborateur">
+      <select id="editAssigne">
+        <option value="">Non assigné</option>
+      </select>
     </div>
     <div class="form-group">
       <label>Commentaire (facultatif, ajouté à l'historique)</label>
@@ -409,6 +411,7 @@ let currentUser = null;
 let allReclamations = [];
 let selectedId = null;
 let currentFilteredRows = [];
+let staffProfiles = [];
 const PALETTE = ['#1A3A7A','#1A5CA8','#C8A84B','#CC0000','#16a34a','#7c3aed','#0891b2','#ea580c','#64748b'];
 let charts = {evolution:null, type:null, agence:null, gestionnaire:null};
 
@@ -608,10 +611,23 @@ function showApp() {
   document.getElementById('appPage').style.display = 'block';
   document.getElementById('userBadgeName').textContent = currentUser.nom || currentUser.email || '—';
   document.getElementById('userBadgeRole').textContent = currentUser.role || '—';
+  chargerProfils();
   chargerReclamations();
 }
 
 // ====== DONNÉES ======
+async function chargerProfils() {
+  try {
+    const r = await fetch(`${SB_URL}/rest/v1/profiles?select=id,nom,email&actif=eq.true&order=nom.asc`, {
+      headers: {'apikey': SB_KEY, 'Authorization': 'Bearer ' + currentSession}
+    });
+    if (!r.ok) throw new Error('Erreur HTTP ' + r.status);
+    staffProfiles = await r.json();
+  } catch (e) {
+    console.error('Erreur chargerProfils:', e);
+  }
+}
+
 async function chargerReclamations() {
   try {
     const r = await fetch(`${SB_URL}/rest/v1/reclamations?select=*&order=date_creation.desc`, {
@@ -826,6 +842,19 @@ function escapeHtml(str) {
 }
 
 // ====== MODAL DÉTAIL / WORKFLOW ======
+function remplirSelectAssigne(valeurActuelle) {
+  const sel = document.getElementById('editAssigne');
+  const options = ['<option value="">Non assigné</option>'];
+  staffProfiles.forEach(p => {
+    options.push(`<option value="${escapeHtml(p.nom)}">${escapeHtml(p.nom)}</option>`);
+  });
+  if (valeurActuelle && !staffProfiles.some(p => p.nom === valeurActuelle)) {
+    options.push(`<option value="${escapeHtml(valeurActuelle)}">${escapeHtml(valeurActuelle)} (inactif)</option>`);
+  }
+  sel.innerHTML = options.join('');
+  sel.value = valeurActuelle || '';
+}
+
 function openDetailModal(id) {
   const rec = allReclamations.find(r => r.id === id);
   if (!rec) return;
@@ -843,7 +872,7 @@ function openDetailModal(id) {
 
   document.getElementById('editStatut').value = rec.statut;
   document.getElementById('editUrgence').value = rec.niveau_urgence;
-  document.getElementById('editAssigne').value = rec.assigne_a || '';
+  remplirSelectAssigne(rec.assigne_a);
   document.getElementById('editCommentaire').value = '';
 
   const histEl = document.getElementById('detailHistorique');
