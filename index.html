@@ -146,7 +146,17 @@ tr.retard-rouge td{background:#fef2f2;}
 .chart-box-title{font-size:11px;font-weight:600;color:var(--navy);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;}
 .chart-box canvas{max-height:220px;}
 
-@media(max-width:700px){.kpi-row{grid-template-columns:1fr 1fr;}.detail-grid{grid-template-columns:1fr;}.charts-grid{grid-template-columns:1fr;}}
+@media(max-width:700px){
+  .kpi-row{grid-template-columns:1fr 1fr;}
+  .detail-grid{grid-template-columns:1fr;}
+  .charts-grid{grid-template-columns:1fr;}
+  header{height:auto;min-height:56px;flex-wrap:wrap;gap:6px;padding:8px 10px;}
+  .header-info .header-sub{display:none;}
+  .header-right{gap:6px;}
+  .user-badge{padding:4px 8px;}
+  .user-badge-name{font-size:11px;}
+  .qr-btn,.logout-btn{padding:6px 10px;font-size:11px;}
+}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
@@ -570,6 +580,7 @@ const STATUT_LABELS = {nouveau:'Nouveau',assigne:'Assigné',pris_en_charge:'Pris
 const TYPE_LABELS = {accueil:'Accueil / Service client',credit:'Crédit',epargne:'Épargne',mobile_money:'Mobile Money',personnel:"Comportement d'un agent",autre:'Autre'};
 
 let currentSession = null;
+let currentRefreshToken = null;
 let currentUser = null;
 let allReclamations = [];
 let selectedId = null;
@@ -592,6 +603,7 @@ function route() {
       try {
         const data = JSON.parse(saved);
         currentSession = data.token;
+        currentRefreshToken = data.refreshToken;
         currentUser = data.user;
         showApp();
         return;
@@ -604,6 +616,89 @@ function route() {
 }
 window.addEventListener('hashchange', route);
 window.addEventListener('DOMContentLoaded', route);
+
+// ====== SESSION : rafraîchissement automatique du jeton ======
+async function rafraichirSession() {
+  if (!currentRefreshToken) throw new Error('Pas de jeton de rafraîchissement.');
+  const r = await fetch(`${SB_URL}/auth/v1/token?grant_type=refresh_token`, {
+    method: 'POST',
+    headers: {'apikey': SB_KEY, 'Content-Type': 'application/json'},
+    body: JSON.stringify({refresh_token: currentRefreshToken})
+  });
+  const data = await r.json();
+  if (!r.ok || !data.access_token) throw new Error('Rafraîchissement de session échoué.');
+
+  currentSession = data.access_token;
+  currentRefreshToken = data.refresh_token || currentRefreshToken;
+  const saved = JSON.parse(sessionStorage.getItem('cr_session') || '{}');
+  saved.token = currentSession;
+  saved.refreshToken = currentRefreshToken;
+  sessionStorage.setItem('cr_session', JSON.stringify(saved));
+}
+
+// Wrapper pour tous les appels authentifiés : rafraîchit le jeton automatiquement
+// une fois en cas d'expiration (401), au lieu de laisser échouer silencieusement
+// après ~1h de session.
+async function sbFetch(url, options) {
+  options = options || {};
+  const headers = Object.assign({apikey: SB_KEY}, options.headers || {}, {Authorization: 'Bearer ' + currentSession});
+  let r = await fetch(url, Object.assign({}, options, {headers}));
+  if (r.status === 401 && currentRefreshToken) {
+    try {
+      await rafraichirSession();
+      headers.Authorization = 'Bearer ' + currentSession;
+      r = await fetch(url, Object.assign({}, options, {headers}));
+    } catch (e) {
+      await handleInactivityTimeout();
+    }
+  }
+  return r;
+}
+
+// ====== SESSION : verrouillage après 15 min d'inactivité ======
+const INACTIVITY_LIMIT_MS = 15 * 60 * 1000;
+let inactivityTimer = null;
+const EVENEMENTS_ACTIVITE = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'click'];
+
+function resetInactivityTimer() {
+  if (!currentSession) return;
+  sessionStorage.setItem('cr_last_activity', Date.now().toString());
+  clearTimeout(inactivityTimer);
+  inactivityTimer = setTimeout(handleInactivityTimeout, INACTIVITY_LIMIT_MS);
+}
+
+function startInactivityWatcher() {
+  const derniere = parseInt(sessionStorage.getItem('cr_last_activity') || '0', 10);
+  if (derniere && (Date.now() - derniere) >= INACTIVITY_LIMIT_MS) {
+    handleInactivityTimeout();
+    return;
+  }
+  EVENEMENTS_ACTIVITE.forEach(evt => document.addEventListener(evt, resetInactivityTimer, {passive: true}));
+  resetInactivityTimer();
+}
+
+function stopInactivityWatcher() {
+  clearTimeout(inactivityTimer);
+  EVENEMENTS_ACTIVITE.forEach(evt => document.removeEventListener(evt, resetInactivityTimer));
+}
+
+async function handleInactivityTimeout() {
+  if (!currentSession) return;
+  try { await sbSignOut(currentSession); } catch (e) {}
+  sessionStorage.removeItem('cr_session');
+  sessionStorage.removeItem('cr_last_activity');
+  currentSession = null;
+  currentRefreshToken = null;
+  currentUser = null;
+  stopInactivityWatcher();
+  document.getElementById('appPage').style.display = 'none';
+  document.getElementById('loginPage').style.display = 'flex';
+  const errEl = document.getElementById('loginError');
+  if (errEl) {
+    errEl.textContent = "Session expirée après 15 minutes d'inactivité — veuillez vous reconnecter.";
+    errEl.style.display = 'block';
+  }
+}
 
 // ====== TOAST ======
 function toast(msg, type) {
@@ -915,13 +1010,14 @@ async function doLogin() {
     if (!data.user) throw new Error('Utilisateur introuvable.');
 
     currentSession = data.access_token;
+    currentRefreshToken = data.refresh_token;
     const profile = await getProfile(data.user.id, currentSession);
 
     if (!profile) throw new Error('Profil introuvable. Contactez un administrateur.');
     if (profile.actif === false) throw new Error('Compte désactivé. Contactez un administrateur.');
 
     currentUser = profile;
-    sessionStorage.setItem('cr_session', JSON.stringify({token: currentSession, user: profile}));
+    sessionStorage.setItem('cr_session', JSON.stringify({token: currentSession, refreshToken: currentRefreshToken, user: profile}));
 
     showApp();
   } catch (e) {
@@ -936,8 +1032,11 @@ async function doLogin() {
 async function doLogout() {
   if (currentSession) { try { await sbSignOut(currentSession); } catch (e) {} }
   sessionStorage.removeItem('cr_session');
+  sessionStorage.removeItem('cr_last_activity');
   currentSession = null;
+  currentRefreshToken = null;
   currentUser = null;
+  stopInactivityWatcher();
   location.hash = '';
   document.getElementById('appPage').style.display = 'none';
   route();
@@ -950,6 +1049,7 @@ function showApp() {
   document.getElementById('appPage').style.display = 'block';
   document.getElementById('userBadgeName').textContent = currentUser.nom || currentUser.email || '—';
   document.getElementById('userBadgeRole').textContent = currentUser.role || '—';
+  startInactivityWatcher();
   chargerProfils();
   chargerReclamations();
   chargerSuggestions();
@@ -1001,9 +1101,7 @@ function telechargerQrCode() {
 // ====== DONNÉES ======
 async function chargerProfils() {
   try {
-    const r = await fetch(`${SB_URL}/rest/v1/profiles?select=id,nom,email&actif=eq.true&order=nom.asc`, {
-      headers: {'apikey': SB_KEY, 'Authorization': 'Bearer ' + currentSession}
-    });
+    const r = await sbFetch(`${SB_URL}/rest/v1/profiles?select=id,nom,email&actif=eq.true&order=nom.asc`);
     if (!r.ok) throw new Error('Erreur HTTP ' + r.status);
     staffProfiles = await r.json();
   } catch (e) {
@@ -1013,9 +1111,7 @@ async function chargerProfils() {
 
 async function chargerReclamations() {
   try {
-    const r = await fetch(`${SB_URL}/rest/v1/reclamations?select=*&order=date_creation.desc`, {
-      headers: {'apikey': SB_KEY, 'Authorization': 'Bearer ' + currentSession}
-    });
+    const r = await sbFetch(`${SB_URL}/rest/v1/reclamations?select=*&order=date_creation.desc`);
     if (!r.ok) throw new Error('Erreur HTTP ' + r.status);
     allReclamations = await r.json();
     renderKpis();
@@ -1029,9 +1125,7 @@ async function chargerReclamations() {
 let allSuggestions = [];
 async function chargerSuggestions() {
   try {
-    const r = await fetch(`${SB_URL}/rest/v1/suggestions?select=*&order=date_creation.desc`, {
-      headers: {'apikey': SB_KEY, 'Authorization': 'Bearer ' + currentSession}
-    });
+    const r = await sbFetch(`${SB_URL}/rest/v1/suggestions?select=*&order=date_creation.desc`);
     if (!r.ok) throw new Error('Erreur HTTP ' + r.status);
     allSuggestions = await r.json();
     renderSuggestions();
@@ -1063,9 +1157,7 @@ function renderSuggestions() {
 let allAvis = [];
 async function chargerAvis() {
   try {
-    const r = await fetch(`${SB_URL}/rest/v1/avis?select=*&order=date_creation.desc`, {
-      headers: {'apikey': SB_KEY, 'Authorization': 'Bearer ' + currentSession}
-    });
+    const r = await sbFetch(`${SB_URL}/rest/v1/avis?select=*&order=date_creation.desc`);
     if (!r.ok) throw new Error('Erreur HTTP ' + r.status);
     allAvis = await r.json();
     renderAvis();
@@ -1325,9 +1417,7 @@ async function chargerPiecesJointes(reclamationId) {
   const conteneur = document.getElementById('detailPiecesJointes');
   conteneur.innerHTML = '<div style="font-size:12px;color:var(--muted)">Chargement...</div>';
   try {
-    const r = await fetch(`${SB_URL}/rest/v1/pieces_jointes_reclamations?reclamation_id=eq.${reclamationId}&select=*&order=uploaded_at.asc`, {
-      headers: {'apikey': SB_KEY, 'Authorization': 'Bearer ' + currentSession}
-    });
+    const r = await sbFetch(`${SB_URL}/rest/v1/pieces_jointes_reclamations?reclamation_id=eq.${reclamationId}&select=*&order=uploaded_at.asc`);
     if (!r.ok) throw new Error('Erreur HTTP ' + r.status);
     const pieces = await r.json();
 
@@ -1353,9 +1443,9 @@ async function voirPieceJointe(index) {
   const piece = pieces[index];
   if (!piece) return;
   try {
-    const r = await fetch(`${SB_URL}/storage/v1/object/sign/pieces-jointes/${piece.storage_path}`, {
+    const r = await sbFetch(`${SB_URL}/storage/v1/object/sign/pieces-jointes/${piece.storage_path}`, {
       method: 'POST',
-      headers: {'apikey': SB_KEY, 'Authorization': 'Bearer ' + currentSession, 'Content-Type': 'application/json'},
+      headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({expiresIn: 60})
     });
     if (!r.ok) throw new Error('Erreur HTTP ' + r.status);
@@ -1491,11 +1581,9 @@ async function saveDetail() {
       historique: hist
     };
 
-    const r = await fetch(`${SB_URL}/rest/v1/reclamations?id=eq.${selectedId}`, {
+    const r = await sbFetch(`${SB_URL}/rest/v1/reclamations?id=eq.${selectedId}`, {
       method: 'PATCH',
       headers: {
-        'apikey': SB_KEY,
-        'Authorization': 'Bearer ' + currentSession,
         'Content-Type': 'application/json',
         'Prefer': 'return=minimal'
       },
