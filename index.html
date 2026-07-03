@@ -684,7 +684,7 @@ async function uploaderFichier(file) {
   const chemin = `reclamations/${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
   const r = await fetch(`${SB_URL}/storage/v1/object/pieces-jointes/${chemin}`, {
     method: 'POST',
-    headers: {'apikey': SB_KEY, 'Content-Type': file.type || 'application/octet-stream'},
+    headers: {'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Content-Type': file.type || 'application/octet-stream'},
     body: file
   });
   if (!r.ok) throw new Error(`Échec de l'envoi de "${file.name}"`);
