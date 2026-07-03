@@ -133,6 +133,9 @@ tr.retard-rouge td{background:#fef2f2;}
 .detail-item.full{grid-column:1/-1;}
 .hist-item{border-left:2px solid var(--border);padding:6px 0 6px 12px;margin-bottom:4px;font-size:12px;}
 .hist-item-meta{color:var(--muted);font-size:11px;}
+.piece-jointe-item{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--bg);border-radius:8px;padding:8px 12px;margin-bottom:6px;font-size:12px;}
+.piece-jointe-lien{color:var(--blue);font-weight:600;cursor:pointer;background:none;border:none;font-family:'Inter',sans-serif;font-size:12px;}
+.piece-jointe-lien:hover{text-decoration:underline;}
 .modal-close{position:absolute;top:16px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted);}
 .modal-box{position:relative;}
 
@@ -208,6 +211,11 @@ tr.retard-rouge td{background:#fef2f2;}
       <div class="form-group">
         <label class="required">Description</label>
         <textarea id="pubDesc" placeholder="Décrivez votre réclamation le plus précisément possible..."></textarea>
+      </div>
+      <div class="form-group">
+        <label>Pièces jointes (optionnel — photos, PDF)</label>
+        <input type="file" id="pubFichiers" multiple accept="image/*,.pdf,video/*">
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">Max 5 fichiers, 10 Mo chacun.</div>
       </div>
       <div class="checkbox-row">
         <input type="checkbox" id="pubUrgent">
@@ -490,6 +498,11 @@ tr.retard-rouge td{background:#fef2f2;}
       <div class="detail-item full"><div class="detail-item-label">Description</div><div class="detail-item-value" id="detailDesc">—</div></div>
     </div>
 
+    <div style="margin-bottom:20px">
+      <div class="detail-item-label" style="margin-bottom:8px">Pièces jointes</div>
+      <div id="detailPiecesJointes"><div style="font-size:12px;color:var(--muted)">Aucune pièce jointe.</div></div>
+    </div>
+
     <div class="form-group">
       <label>Statut</label>
       <select id="editStatut">
@@ -631,7 +644,7 @@ function afficherConfirmation(type, reference) {
 }
 
 function retourFormulaire() {
-  ['pubNom','pubTel','pubEmail','pubCompte','pubAgence','pubDesc','pubWebsite','sugNom','sugAgence','sugTexte','avisNom','avisAgence','avisCommentaire'].forEach(id => {
+  ['pubNom','pubTel','pubEmail','pubCompte','pubAgence','pubDesc','pubWebsite','pubFichiers','sugNom','sugAgence','sugTexte','avisNom','avisAgence','avisCommentaire'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
@@ -656,6 +669,28 @@ document.querySelectorAll('#avisStars .star').forEach(star => {
   });
 });
 
+// ====== PIÈCES JOINTES ======
+const MAX_FICHIERS = 5;
+const MAX_TAILLE_FICHIER = 10 * 1024 * 1024; // 10 Mo
+
+function typeFichierDepuisMime(mime) {
+  if (mime.startsWith('image/')) return 'image';
+  if (mime === 'application/pdf') return 'pdf';
+  if (mime.startsWith('video/')) return 'video';
+  return null;
+}
+
+async function uploaderFichier(file) {
+  const chemin = `reclamations/${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+  const r = await fetch(`${SB_URL}/storage/v1/object/pieces-jointes/${chemin}`, {
+    method: 'POST',
+    headers: {'apikey': SB_KEY, 'Content-Type': file.type || 'application/octet-stream'},
+    body: file
+  });
+  if (!r.ok) throw new Error(`Échec de l'envoi de "${file.name}"`);
+  return {nom_fichier: file.name, storage_path: chemin, type_fichier: typeFichierDepuisMime(file.type)};
+}
+
 // ====== FORMULAIRE PUBLIC : RÉCLAMATION ======
 async function soumettreReclamation() {
   const errEl = document.getElementById('pubError');
@@ -675,9 +710,26 @@ async function soumettreReclamation() {
   const type = document.getElementById('pubType').value;
   const desc = document.getElementById('pubDesc').value.trim();
   const urgent = document.getElementById('pubUrgent').checked;
+  const fichiers = Array.from(document.getElementById('pubFichiers').files || []);
 
   if (!nom || !tel || !agence || !desc) {
     errEl.textContent = 'Veuillez renseigner tous les champs obligatoires (*).';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  if (fichiers.length > MAX_FICHIERS) {
+    errEl.textContent = `Vous ne pouvez joindre que ${MAX_FICHIERS} fichiers maximum.`;
+    errEl.style.display = 'block';
+    return;
+  }
+  if (fichiers.some(f => f.size > MAX_TAILLE_FICHIER)) {
+    errEl.textContent = 'Chaque fichier doit faire moins de 10 Mo.';
+    errEl.style.display = 'block';
+    return;
+  }
+  if (fichiers.some(f => !typeFichierDepuisMime(f.type))) {
+    errEl.textContent = 'Formats acceptés : images, PDF et vidéos uniquement.';
     errEl.style.display = 'block';
     return;
   }
@@ -687,6 +739,13 @@ async function soumettreReclamation() {
   btn.innerHTML = '<div class="spinner"></div> Envoi en cours...';
 
   try {
+    let piecesJointes = [];
+    if (fichiers.length > 0) {
+      btn.innerHTML = '<div class="spinner"></div> Envoi des pièces jointes...';
+      piecesJointes = await Promise.all(fichiers.map(uploaderFichier));
+    }
+
+    btn.innerHTML = '<div class="spinner"></div> Envoi en cours...';
     const r = await fetch(`${SB_URL}/rest/v1/rpc/soumettre_reclamation`, {
       method: 'POST',
       headers: {'apikey': SB_KEY, 'Content-Type': 'application/json'},
@@ -698,7 +757,8 @@ async function soumettreReclamation() {
         p_agence: agence,
         p_type_plainte: type,
         p_description: desc,
-        p_niveau_urgence: urgent ? 'urgent' : 'normal'
+        p_niveau_urgence: urgent ? 'urgent' : 'normal',
+        p_pieces_jointes: piecesJointes
       })
     });
     if (!r.ok) throw new Error('Erreur HTTP ' + r.status);
@@ -1259,6 +1319,54 @@ function remplirSelectAssigne(valeurActuelle) {
   sel.value = valeurActuelle || '';
 }
 
+const ICONES_TYPE_FICHIER = {image: '🖼️', pdf: '📄', video: '🎞️'};
+
+async function chargerPiecesJointes(reclamationId) {
+  const conteneur = document.getElementById('detailPiecesJointes');
+  conteneur.innerHTML = '<div style="font-size:12px;color:var(--muted)">Chargement...</div>';
+  try {
+    const r = await fetch(`${SB_URL}/rest/v1/pieces_jointes_reclamations?reclamation_id=eq.${reclamationId}&select=*&order=uploaded_at.asc`, {
+      headers: {'apikey': SB_KEY, 'Authorization': 'Bearer ' + currentSession}
+    });
+    if (!r.ok) throw new Error('Erreur HTTP ' + r.status);
+    const pieces = await r.json();
+
+    if (pieces.length === 0) {
+      conteneur.innerHTML = '<div style="font-size:12px;color:var(--muted)">Aucune pièce jointe.</div>';
+      return;
+    }
+
+    conteneur.innerHTML = pieces.map((p, i) => `
+      <div class="piece-jointe-item">
+        <span>${ICONES_TYPE_FICHIER[p.type_fichier] || '📎'} ${escapeHtml(p.nom_fichier)}</span>
+        <button class="piece-jointe-lien" onclick="voirPieceJointe(${i})">Voir</button>
+      </div>
+    `).join('');
+    conteneur.dataset.pieces = JSON.stringify(pieces);
+  } catch (e) {
+    conteneur.innerHTML = '<div style="font-size:12px;color:var(--red)">Erreur de chargement des pièces jointes.</div>';
+  }
+}
+
+async function voirPieceJointe(index) {
+  const pieces = JSON.parse(document.getElementById('detailPiecesJointes').dataset.pieces || '[]');
+  const piece = pieces[index];
+  if (!piece) return;
+  try {
+    const r = await fetch(`${SB_URL}/storage/v1/object/sign/pieces-jointes/${piece.storage_path}`, {
+      method: 'POST',
+      headers: {'apikey': SB_KEY, 'Authorization': 'Bearer ' + currentSession, 'Content-Type': 'application/json'},
+      body: JSON.stringify({expiresIn: 60})
+    });
+    if (!r.ok) throw new Error('Erreur HTTP ' + r.status);
+    const data = await r.json();
+    if (!data.signedURL) throw new Error('URL signée introuvable.');
+    window.open(SB_URL + data.signedURL, '_blank');
+  } catch (e) {
+    toast('Erreur lors de l\'ouverture de la pièce jointe : ' + e.message, 'error');
+  }
+}
+
 function openDetailModal(id) {
   const rec = allReclamations.find(r => r.id === id);
   if (!rec) return;
@@ -1273,6 +1381,7 @@ function openDetailModal(id) {
   document.getElementById('detailAgence').textContent = rec.agence || '—';
   document.getElementById('detailType').textContent = TYPE_LABELS[rec.type_plainte] || rec.type_plainte;
   document.getElementById('detailDesc').textContent = rec.description || '—';
+  chargerPiecesJointes(id);
 
   document.getElementById('editStatut').value = rec.statut;
   document.getElementById('editUrgence').value = rec.niveau_urgence;
