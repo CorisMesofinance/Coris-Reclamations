@@ -1361,7 +1361,7 @@ async function voirPieceJointe(index) {
     if (!r.ok) throw new Error('Erreur HTTP ' + r.status);
     const data = await r.json();
     if (!data.signedURL) throw new Error('URL signée introuvable.');
-    const url = data.signedURL.startsWith('http') ? data.signedURL : SB_URL + data.signedURL;
+    const url = data.signedURL.startsWith('http') ? data.signedURL : `${SB_URL}/storage/v1${data.signedURL}`;
     window.open(url, '_blank');
   } catch (e) {
     toast('Erreur lors de l\'ouverture de la pièce jointe : ' + e.message, 'error');
