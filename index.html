@@ -521,7 +521,7 @@ tr.retard-rouge td{background:#fef2f2;}
         <option value="pris_en_charge">Pris en charge</option>
         <option value="en_traitement">En traitement</option>
         <option value="resolu">Résolu</option>
-        <option value="clos">Clos</option>
+        <option value="clos" id="optClos">Clos</option>
       </select>
     </div>
     <div class="form-group">
@@ -538,10 +538,10 @@ tr.retard-rouge td{background:#fef2f2;}
       </select>
     </div>
     <div class="form-group">
-      <label>Commentaire (facultatif, ajouté à l'historique)</label>
+      <label id="labelCommentaire">Commentaire (facultatif, ajouté à l'historique)</label>
       <textarea id="editCommentaire" placeholder="Ex: Client recontacté, dossier transmis au service crédit..."></textarea>
     </div>
-    <div class="form-error" id="detailPermissionNote" style="display:none">Cette réclamation ne vous est pas assignée — vous pouvez la consulter mais pas la modifier.</div>
+    <div class="form-error" id="detailPermissionNote" style="display:none"></div>
     <button class="btn-primary" id="saveDetailBtn" onclick="saveDetail()">✅ Enregistrer</button>
 
     <div style="margin-top:20px">
@@ -1481,14 +1481,35 @@ function openDetailModal(id) {
 
   const estAdmin = currentUser.is_admin === true;
   const assigneAMoi = rec.assigne_a === (currentUser.nom || '');
-  const peutAgir = estAdmin || assigneAMoi;
+  const estCloture = rec.statut === 'clos';
+  const peutAgir = !estCloture && (estAdmin || assigneAMoi);
+
+  // Urgence : fixée par le client à la création, jamais modifiable par le staff.
+  document.getElementById('editUrgence').disabled = true;
+  // Seuls les admins peuvent choisir "Clos" dans la liste.
+  document.getElementById('optClos').style.display = estAdmin ? 'block' : 'none';
 
   document.getElementById('editStatut').disabled = !peutAgir;
-  document.getElementById('editUrgence').disabled = !peutAgir;
-  document.getElementById('editAssigne').disabled = !estAdmin;
+  document.getElementById('editAssigne').disabled = !estAdmin || estCloture;
   document.getElementById('editCommentaire').disabled = !peutAgir;
   document.getElementById('saveDetailBtn').style.display = peutAgir ? 'flex' : 'none';
-  document.getElementById('detailPermissionNote').style.display = peutAgir ? 'none' : 'block';
+
+  const noteEl = document.getElementById('detailPermissionNote');
+  const labelCommentaire = document.getElementById('labelCommentaire');
+  if (estCloture) {
+    noteEl.textContent = 'Cette réclamation est clôturée — plus aucune modification n\'est possible.';
+    noteEl.style.display = 'block';
+    labelCommentaire.textContent = 'Commentaire (facultatif, ajouté à l\'historique)';
+  } else if (!peutAgir) {
+    noteEl.textContent = 'Cette réclamation ne vous est pas assignée — vous pouvez la consulter mais pas la modifier.';
+    noteEl.style.display = 'block';
+    labelCommentaire.textContent = 'Commentaire (facultatif, ajouté à l\'historique)';
+  } else {
+    noteEl.style.display = 'none';
+    labelCommentaire.textContent = estAdmin
+      ? 'Commentaire (facultatif, ajouté à l\'historique)'
+      : 'Commentaire (obligatoire, ajouté à l\'historique)';
+  }
 
   const histEl = document.getElementById('detailHistorique');
   const hist = Array.isArray(rec.historique) ? rec.historique : [];
@@ -1551,11 +1572,17 @@ async function saveDetail() {
   if (!selectedId) return;
   const rec = allReclamations.find(r => r.id === selectedId);
   if (!rec) return;
+  if (rec.statut === 'clos') return;
 
   const nouveauStatut = document.getElementById('editStatut').value;
   const nouvelleUrgence = document.getElementById('editUrgence').value;
   const nouvelAssigne = document.getElementById('editAssigne').value.trim();
   const commentaire = document.getElementById('editCommentaire').value.trim();
+
+  if (currentUser.is_admin !== true && !commentaire) {
+    toast('Le commentaire est obligatoire.', 'error');
+    return;
+  }
 
   const btn = document.getElementById('saveDetailBtn');
   btn.disabled = true;
